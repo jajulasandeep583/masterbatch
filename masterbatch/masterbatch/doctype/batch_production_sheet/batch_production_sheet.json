@@ -1,0 +1,110 @@
+{
+  "name": "Batch Production Sheet",
+  "module": "Masterbatch",
+  "doctype": "DocType",
+  "is_submittable": 1,
+  "fields": [
+    {
+      "fieldname": "batch_no",
+      "fieldtype": "Data",
+      "label": "Batch No",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "production_date",
+      "fieldtype": "Date",
+      "label": "Production Date",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "shift",
+      "fieldtype": "Select",
+      "label": "Shift",
+      "options": "\nMorning\nAfternoon\nNight"
+    },
+    {
+      "fieldname": "finished_item",
+      "fieldtype": "Link",
+      "label": "Finished Item",
+      "options": "Item",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "shade_code",
+      "fieldtype": "Link",
+      "label": "Shade Code",
+      "options": "Shade Code"
+    },
+    {
+      "fieldname": "formulation_no",
+      "fieldtype": "Link",
+      "label": "Lab Formulation",
+      "options": "Lab Formulation"
+    },
+    {
+      "fieldname": "planned_qty",
+      "fieldtype": "Float",
+      "label": "Planned Qty (KG)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "actual_output_kg",
+      "fieldtype": "Float",
+      "label": "Actual Output (KG)",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "rejection_kg",
+      "fieldtype": "Float",
+      "label": "Rejection (KG)"
+    },
+    {
+      "fieldname": "consumption_items",
+      "fieldtype": "Table",
+      "label": "Raw Material Consumption",
+      "options": "Batch Production Sheet Item"
+    },
+    {
+      "fieldname": "work_order",
+      "fieldtype": "Link",
+      "label": "ERPNext Work Order",
+      "options": "Work Order"
+    },
+    {
+      "fieldname": "stock_entry",
+      "fieldtype": "Link",
+      "label": "Stock Entry",
+      "options": "Stock Entry"
+    },
+    {
+      "fieldname": "operator",
+      "fieldtype": "Data",
+      "label": "Operator"
+    },
+    {
+      "fieldname": "qc_status",
+      "fieldtype": "Select",
+      "label": "QC Status",
+      "options": "\nPending\nPassed\nFailed"
+    },
+    {
+      "fieldname": "remarks",
+      "fieldtype": "Small Text",
+      "label": "Remarks"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "submit": 1,
+      "cancel": 1
+    }
+  ]
+}

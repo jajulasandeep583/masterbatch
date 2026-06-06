@@ -1,0 +1,13 @@
+{
+  "name": "Raw Material Consumption",
+  "doctype": "Report",
+  "report_type": "Script Report",
+  "ref_doctype": "Batch Production Sheet",
+  "is_standard": "Yes",
+  "module": "Masterbatch",
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "name": "Lab Formulation",
+  "module": "Masterbatch",
+  "doctype": "DocType",
+  "is_submittable": 1,
+  "fields": [
+    {
+      "fieldname": "formulation_no",
+      "fieldtype": "Data",
+      "label": "Formulation No",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "shade_code",
+      "fieldtype": "Link",
+      "label": "Shade Code",
+      "options": "Shade Code",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "finished_item",
+      "fieldtype": "Link",
+      "label": "Finished Item",
+      "options": "Item",
+      "reqd": 1
+    },
+    {
+      "fieldname": "date",
+      "fieldtype": "Date",
+      "label": "Date"
+    },
+    {
+      "fieldname": "batch_size_kg",
+      "fieldtype": "Float",
+      "label": "Batch Size (KG)",
+      "default": "500"
+    },
+    {
+      "fieldname": "formulation_items",
+      "fieldtype": "Table",
+      "label": "Formulation Items",
+      "options": "Lab Formulation Item"
+    },
+    {
+      "fieldname": "remarks",
+      "fieldtype": "Small Text",
+      "label": "Remarks"
+    },
+    {
+      "fieldname": "approved_by",
+      "fieldtype": "Link",
+      "label": "Approved By",
+      "options": "User"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "submit": 1,
+      "cancel": 1
+    }
+  ]
+}

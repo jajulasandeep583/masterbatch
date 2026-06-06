@@ -1,0 +1,19 @@
+{
+  "name": "Masterbatch",
+  "doctype": "Workspace",
+  "module": "Masterbatch",
+  "label": "Masterbatch",
+  "category": "Modules",
+  "icon": "manufacturing",
+  "color": "#7B2D8B",
+  "is_standard": 1,
+  "shortcuts": [
+    {"label": "Batch Production Sheet", "link_to": "Batch Production Sheet", "type": "DocType"},
+    {"label": "Lab Formulation",        "link_to": "Lab Formulation",        "type": "DocType"},
+    {"label": "Shade Code",             "link_to": "Shade Code",             "type": "DocType"},
+    {"label": "Production Summary",     "link_to": "Production Summary",     "type": "Report"},
+    {"label": "RM Consumption",         "link_to": "Raw Material Consumption","type": "Report"},
+    {"label": "Shade-wise Production",  "link_to": "Shade-wise Production",  "type": "Report"}
+  ],
+  "content": "[{\"type\":\"shortcut\"}]"
+}
