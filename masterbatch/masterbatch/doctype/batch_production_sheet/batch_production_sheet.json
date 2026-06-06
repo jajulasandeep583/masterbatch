@@ -2,6 +2,7 @@
   "name": "Batch Production Sheet",
   "module": "Masterbatch",
   "doctype": "DocType",
+  "autoname": "field:batch_no",
   "is_submittable": 1,
   "fields": [
     {

@@ -2,6 +2,7 @@
   "name": "Shade Code",
   "module": "Masterbatch",
   "doctype": "DocType",
+  "autoname": "field:shade_code",
   "is_submittable": 0,
   "fields": [
     {

@@ -195,7 +195,7 @@ def make_customer(name, group, city):
         return
     doc = frappe.new_doc("Customer")
     doc.customer_name = name
-    doc.customer_group = "All Customer Groups"
+    doc.customer_group = "Commercial"
     doc.territory = "India"
     doc.insert(ignore_permissions=True)
 
@@ -204,7 +204,7 @@ def make_supplier(name, group):
         return
     doc = frappe.new_doc("Supplier")
     doc.supplier_name = name
-    doc.supplier_group = "All Supplier Groups"
+    doc.supplier_group = "Raw Material"
     doc.insert(ignore_permissions=True)
 
 def make_shade(code, name, product_type, resin=None):
@@ -457,3 +457,291 @@ def run():
     print("   → 30+ Batch Production Sheets with realistic data")
     print("   → Shade Codes, Lab Formulations structure ready")
     print("   → Reports: Production Summary, RM Consumption, Shade-wise Production")
+
+
+def fix_shades_and_batches():
+    import random
+    frappe.set_user("Administrator")
+
+    # remove any previously created (hash-named) shade codes
+    for nm in frappe.get_all("Shade Code", pluck="name"):
+        frappe.delete_doc("Shade Code", nm, force=1, ignore_permissions=True)
+    frappe.db.commit()
+
+    shade_map = {
+        "SH-W01":  ("White PE Standard",    "White MB",     "RM-PE-NAT"),
+        "SH-W02":  ("White PP Standard",    "White MB",     "RM-PP-NAT"),
+        "SH-B01":  ("Black PE Standard",    "Black MB",     "RM-PE-NAT"),
+        "SH-B02":  ("Black PP Standard",    "Black MB",     "RM-PP-NAT"),
+        "SH-R01":  ("Vivid Red PE",         "Colour MB",    "RM-PE-NAT"),
+        "SH-R02":  ("Brick Red PP",         "Colour MB",    "RM-PP-NAT"),
+        "SH-Y01":  ("Lemon Yellow PE",      "Colour MB",    "RM-PE-NAT"),
+        "SH-BL01": ("Royal Blue PE",        "Colour MB",    "RM-PE-NAT"),
+        "SH-G01":  ("Forest Green PE",      "Colour MB",    "RM-PE-NAT"),
+        "SH-F01":  ("Filler PE 70%",        "Filler MB",    "RM-PE-NAT"),
+        "SH-F02":  ("Filler PP 70%",        "Filler MB",    "RM-PP-NAT"),
+        "SH-A01":  ("Antioxidant PE",       "Additive MB",  "RM-PE-NAT"),
+        "SH-SP01": ("Pearlescent PE",       "Specialty MB", "RM-PE-NAT"),
+    }
+    for code, (name, ptype, resin) in shade_map.items():
+        make_shade(code, name, ptype, resin)
+    frappe.db.commit()
+
+    # remove any previously created batches then recreate cleanly
+    for nm in frappe.get_all("Batch Production Sheet", pluck="name"):
+        d = frappe.get_doc("Batch Production Sheet", nm)
+        if d.docstatus == 1:
+            d.cancel()
+        frappe.delete_doc("Batch Production Sheet", nm, force=1, ignore_permissions=True)
+    frappe.db.commit()
+
+    fg_shades = [fg[:2] + (fg[3],) for fg in FINISHED_GOODS]
+    batch_counter = 1
+    created = 0
+    for day_offset in range(30, 0, -1):
+        date = add_days(today(), -day_offset)
+        for _ in range(random.randint(2, 4)):
+            fg_item, _, shade_code = random.choice(fg_shades)
+            recipe = BOMS.get(fg_item, [])
+            if not recipe:
+                continue
+            planned = random.choice([250, 500, 750, 1000])
+            actual = round(planned * random.uniform(0.97, 0.995), 1)
+            ingredients = []
+            for rm, pct in recipe:
+                plan_qty = round((pct / 100) * planned, 2)
+                actual_qty = round(plan_qty * random.uniform(0.98, 1.02), 2)
+                ingredients.append((rm, actual_qty, plan_qty))
+            batch_no = f"BTCH-{str(batch_counter).zfill(4)}"
+            try:
+                make_batch_production_sheet(
+                    batch_no, fg_item, shade_code, planned, actual, date,
+                    random.choice(OPERATORS), random.choice(SHIFTS), ingredients, random.choice(QC)
+                )
+                created += 1
+            except Exception as e:
+                print(f"  batch skip {batch_no}: {e}")
+            batch_counter += 1
+    frappe.db.commit()
+    print(f"shades recreated ({len(shade_map)}), batches created ({created})")
+
+
+def build_demo_workspace():
+    """Create Number Cards, Dashboard Charts and the Masterbatch workspace."""
+    import json
+    frappe.set_user("Administrator")
+
+    def h():
+        return frappe.generate_hash(length=10)
+
+    # ---- Number Cards ----
+    number_cards = [
+        {"name": "MB Total Batches", "label": "Total Batches", "document_type": "Batch Production Sheet",
+         "function": "Count", "filters_json": json.dumps([["Batch Production Sheet", "docstatus", "=", 1]])},
+        {"name": "MB Total Output", "label": "Total Output (KG)", "document_type": "Batch Production Sheet",
+         "function": "Sum", "aggregate_function_based_on": "actual_output_kg",
+         "filters_json": json.dumps([["Batch Production Sheet", "docstatus", "=", 1]])},
+        {"name": "MB Open Sales Orders", "label": "Sales Orders", "document_type": "Sales Order",
+         "function": "Count", "filters_json": json.dumps([["Sales Order", "docstatus", "=", 1]])},
+        {"name": "MB Open Purchase Orders", "label": "Purchase Orders", "document_type": "Purchase Order",
+         "function": "Count", "filters_json": json.dumps([["Purchase Order", "docstatus", "=", 1]])},
+    ]
+    for nc in number_cards:
+        try:
+            if frappe.db.exists("Number Card", nc["name"]):
+                frappe.delete_doc("Number Card", nc["name"], force=1, ignore_permissions=True)
+            doc = frappe.new_doc("Number Card")
+            doc.update(nc)
+            doc.label = nc["label"]
+            doc.name = nc["name"]
+            doc.is_public = 1
+            doc.show_percentage_stats = 1
+            doc.insert(ignore_permissions=True)
+        except Exception as e:
+            print(f"  number card skip {nc['name']}: {e}")
+    frappe.db.commit()
+
+    # ---- Dashboard Charts ----
+    charts = [
+        {"name": "MB Daily Production", "chart_name": "Daily Production Output",
+         "chart_type": "Sum", "document_type": "Batch Production Sheet",
+         "based_on": "production_date", "value_based_on": "actual_output_kg",
+         "timespan": "Last Month", "time_interval": "Daily", "type": "Line",
+         "filters_json": json.dumps([["Batch Production Sheet", "docstatus", "=", 1]])},
+        {"name": "MB Shade Output", "chart_name": "Shade-wise Output (KG)",
+         "chart_type": "Group By", "document_type": "Batch Production Sheet",
+         "group_by_based_on": "shade_code", "group_by_type": "Sum",
+         "aggregate_function_based_on": "actual_output_kg", "type": "Bar",
+         "filters_json": json.dumps([["Batch Production Sheet", "docstatus", "=", 1]])},
+        {"name": "MB QC Status", "chart_name": "Production by QC Status",
+         "chart_type": "Group By", "document_type": "Batch Production Sheet",
+         "group_by_based_on": "qc_status", "group_by_type": "Count", "type": "Donut",
+         "filters_json": json.dumps([["Batch Production Sheet", "docstatus", "=", 1]])},
+    ]
+    for ch in charts:
+        try:
+            if frappe.db.exists("Dashboard Chart", ch["name"]):
+                frappe.delete_doc("Dashboard Chart", ch["name"], force=1, ignore_permissions=True)
+            doc = frappe.new_doc("Dashboard Chart")
+            doc.update(ch)
+            doc.name = ch["name"]
+            doc.is_public = 1
+            doc.insert(ignore_permissions=True)
+        except Exception as e:
+            print(f"  chart skip {ch['name']}: {e}")
+    frappe.db.commit()
+
+    # ---- Workspace ----
+    if frappe.db.exists("Workspace", "Masterbatch"):
+        frappe.delete_doc("Workspace", "Masterbatch", force=1, ignore_permissions=True)
+        frappe.db.commit()
+
+    ws = frappe.new_doc("Workspace")
+    ws.name = "Masterbatch"
+    ws.title = "Masterbatch"
+    ws.label = "Masterbatch"
+    ws.module = "Masterbatch"
+    ws.public = 1
+    ws.icon = "manufacturing"
+    ws.is_hidden = 0
+
+    shortcuts = [
+        ("Batch Production Sheet", "Batch Production Sheet", "DocType", "#7B2D8B"),
+        ("Shade Code", "Shade Code", "DocType", "#318AD8"),
+        ("Lab Formulation", "Lab Formulation", "DocType", "#29CD42"),
+        ("Production Summary", "Production Summary", "Report", "#FFC107"),
+        ("RM Consumption", "Raw Material Consumption", "Report", "#FF5858"),
+        ("Shade-wise Production", "Shade-wise Production", "Report", "#00BCD4"),
+    ]
+    for label, link_to, typ, color in shortcuts:
+        ws.append("shortcuts", {"label": label, "link_to": link_to, "type": typ, "color": color})
+
+    for nc in number_cards:
+        ws.append("number_cards", {"number_card_name": nc["name"], "label": nc["label"]})
+
+    for ch in charts:
+        ws.append("charts", {"chart_name": ch["name"], "label": ch["chart_name"]})
+
+    blocks = []
+    blocks.append({"id": h(), "type": "header",
+                   "data": {"text": "<span><b>Capital Colours — Masterbatch Manufacturing</b></span>", "col": 12}})
+    blocks.append({"id": h(), "type": "paragraph",
+                   "data": {"text": "Production, Quality, Inventory & Sales — live overview", "col": 12}})
+    for nc in number_cards:
+        blocks.append({"id": h(), "type": "number_card", "data": {"number_card_name": nc["name"], "col": 3}})
+    blocks.append({"id": h(), "type": "chart", "data": {"chart_name": "MB Daily Production", "col": 12}})
+    blocks.append({"id": h(), "type": "chart", "data": {"chart_name": "MB Shade Output", "col": 8}})
+    blocks.append({"id": h(), "type": "chart", "data": {"chart_name": "MB QC Status", "col": 4}})
+    blocks.append({"id": h(), "type": "header", "data": {"text": "<span><b>Quick Links</b></span>", "col": 12}})
+    for label, link_to, typ, color in shortcuts:
+        blocks.append({"id": h(), "type": "shortcut", "data": {"shortcut_name": label, "col": 4}})
+
+    ws.content = json.dumps(blocks)
+    ws.insert(ignore_permissions=True)
+    frappe.db.commit()
+    print(f"workspace built: {len(number_cards)} cards, {len(charts)} charts, {len(shortcuts)} shortcuts")
+
+
+def build_demo_workspace2():
+    import json
+    frappe.set_user("Administrator")
+
+    def h():
+        return frappe.generate_hash(length=10)
+
+    f_batch = json.dumps([["Batch Production Sheet", "docstatus", "=", 1]])
+    f_so = json.dumps([["Sales Order", "docstatus", "=", 1]])
+    f_po = json.dumps([["Purchase Order", "docstatus", "=", 1]])
+
+    # clean any existing objects
+    for lbl in ["Total Batches", "Total Output (KG)", "Sales Orders", "Purchase Orders"]:
+        for nm in frappe.get_all("Number Card", filters={"label": lbl}, pluck="name"):
+            frappe.delete_doc("Number Card", nm, force=1, ignore_permissions=True)
+    for cn in ["Daily Production Output", "Shade-wise Output (KG)", "Production by QC Status"]:
+        for nm in frappe.get_all("Dashboard Chart", filters={"chart_name": cn}, pluck="name"):
+            frappe.delete_doc("Dashboard Chart", nm, force=1, ignore_permissions=True)
+    if frappe.db.exists("Workspace", "Masterbatch"):
+        frappe.delete_doc("Workspace", "Masterbatch", force=1, ignore_permissions=True)
+    frappe.db.commit()
+
+    card_defs = [
+        {"label": "Total Batches", "document_type": "Batch Production Sheet", "function": "Count", "filters_json": f_batch},
+        {"label": "Total Output (KG)", "document_type": "Batch Production Sheet", "function": "Sum",
+         "aggregate_function_based_on": "actual_output_kg", "filters_json": f_batch},
+        {"label": "Sales Orders", "document_type": "Sales Order", "function": "Count", "filters_json": f_so},
+        {"label": "Purchase Orders", "document_type": "Purchase Order", "function": "Count", "filters_json": f_po},
+    ]
+    card_names = []
+    for c in card_defs:
+        try:
+            doc = frappe.new_doc("Number Card")
+            doc.update(c)
+            doc.is_public = 1
+            doc.insert(ignore_permissions=True)
+            card_names.append(doc.name)
+        except Exception as e:
+            print(f"  card skip {c['label']}: {e}")
+
+    chart_defs = [
+        {"chart_name": "Daily Production Output", "chart_type": "Sum", "document_type": "Batch Production Sheet",
+         "based_on": "production_date", "value_based_on": "actual_output_kg", "timespan": "Last Month",
+         "time_interval": "Daily", "type": "Line", "filters_json": f_batch},
+        {"chart_name": "Shade-wise Output (KG)", "chart_type": "Group By", "document_type": "Batch Production Sheet",
+         "group_by_based_on": "shade_code", "group_by_type": "Sum", "aggregate_function_based_on": "actual_output_kg",
+         "type": "Bar", "filters_json": f_batch},
+        {"chart_name": "Production by QC Status", "chart_type": "Group By", "document_type": "Batch Production Sheet",
+         "group_by_based_on": "qc_status", "group_by_type": "Count", "type": "Donut", "filters_json": f_batch},
+    ]
+    chart_names = []
+    for c in chart_defs:
+        try:
+            doc = frappe.new_doc("Dashboard Chart")
+            doc.update(c)
+            doc.is_public = 1
+            doc.insert(ignore_permissions=True)
+            chart_names.append(doc.name)
+        except Exception as e:
+            print(f"  chart skip {c['chart_name']}: {e}")
+    frappe.db.commit()
+
+    ws = frappe.new_doc("Workspace")
+    ws.title = "Masterbatch"
+    ws.label = "Masterbatch"
+    ws.module = "Masterbatch"
+    ws.public = 1
+    ws.icon = "manufacturing"
+
+    shortcuts = [
+        ("Batch Production Sheet", "Batch Production Sheet", "DocType", "#7B2D8B"),
+        ("Shade Code", "Shade Code", "DocType", "#318AD8"),
+        ("Lab Formulation", "Lab Formulation", "DocType", "#29CD42"),
+        ("Production Summary", "Production Summary", "Report", "#FFC107"),
+        ("RM Consumption", "Raw Material Consumption", "Report", "#FF5858"),
+        ("Shade-wise Production", "Shade-wise Production", "Report", "#00BCD4"),
+    ]
+    for label, link_to, typ, color in shortcuts:
+        ws.append("shortcuts", {"label": label, "link_to": link_to, "type": typ, "color": color})
+    for nm in card_names:
+        ws.append("number_cards", {"number_card_name": nm, "label": nm})
+    for nm in chart_names:
+        ws.append("charts", {"chart_name": nm, "label": nm})
+
+    blocks = []
+    blocks.append({"id": h(), "type": "header",
+                   "data": {"text": "<span><b>Capital Colours — Masterbatch Manufacturing</b></span>", "col": 12}})
+    for nm in card_names:
+        blocks.append({"id": h(), "type": "number_card", "data": {"number_card_name": nm, "col": 3}})
+    if len(chart_names) >= 1:
+        blocks.append({"id": h(), "type": "chart", "data": {"chart_name": chart_names[0], "col": 12}})
+    if len(chart_names) >= 2:
+        blocks.append({"id": h(), "type": "chart", "data": {"chart_name": chart_names[1], "col": 8}})
+    if len(chart_names) >= 3:
+        blocks.append({"id": h(), "type": "chart", "data": {"chart_name": chart_names[2], "col": 4}})
+    blocks.append({"id": h(), "type": "header", "data": {"text": "<span><b>Quick Links</b></span>", "col": 12}})
+    for label, link_to, typ, color in shortcuts:
+        blocks.append({"id": h(), "type": "shortcut", "data": {"shortcut_name": label, "col": 4}})
+
+    ws.content = json.dumps(blocks)
+    ws.insert(ignore_permissions=True)
+    frappe.db.commit()
+    print(f"OK cards={card_names} charts={chart_names}")
