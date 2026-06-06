@@ -814,3 +814,97 @@ def add_formcost_shortcut():
         ws.save(ignore_permissions=True)
         frappe.db.commit()
     print("workspace shortcut added")
+
+
+def create_flow_examples():
+    """Create real example transactions so stock actually moves: PR in, Manufacture, Delivery out."""
+    from frappe.utils import today, add_days
+    frappe.set_user("Administrator")
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    abbr = frappe.db.get_value("Company", company, "abbr")
+    wh_src = f"Stores - {abbr}"
+    wh_fg = f"Finished Goods - {abbr}"
+    out = {}
+
+    # 1) Purchase Receipt from first submitted PO  (raw material INWARD)
+    try:
+        po = frappe.get_all("Purchase Order", filters={"docstatus": 1}, limit=1, pluck="name")
+        if po and not frappe.get_all("Purchase Receipt", filters={"docstatus": 1}, limit=1):
+            from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
+            pr = make_purchase_receipt(po[0])
+            pr.set_posting_time = 1
+            pr.posting_date = add_days(today(), -8)
+            for it in pr.items:
+                it.warehouse = wh_src
+            pr.insert(ignore_permissions=True)
+            pr.submit()
+            out["purchase_receipt"] = pr.name
+    except Exception as e:
+        out["pr_error"] = str(e)
+    frappe.db.commit()
+
+    # 2) Manufacture Stock Entries for recent batches (RM CONSUMED, FG PRODUCED)
+    from masterbatch.masterbatch.doctype.batch_production_sheet.batch_production_sheet import make_stock_entry
+    made = []
+    batches = frappe.get_all("Batch Production Sheet",
+                             filters={"docstatus": 1, "stock_entry": ["is", "not set"]},
+                             fields=["name", "finished_item"], order_by="production_date desc", limit=10)
+    for b in batches:
+        try:
+            se = make_stock_entry(b.name)
+            made.append((b.finished_item, se))
+        except Exception as e:
+            out.setdefault("mfg_errors", []).append(f"{b.name}: {e}")
+    out["manufacture_entries"] = len(made)
+    frappe.db.commit()
+
+    # 3) Delivery Note for a produced item (finished goods OUTWARD)
+    try:
+        if not frappe.get_all("Delivery Note", filters={"docstatus": 1}, limit=1):
+            deliver = None
+            for fi, se in made:
+                qty = frappe.db.get_value("Bin", {"item_code": fi, "warehouse": wh_fg}, "actual_qty") or 0
+                if qty and qty > 60:
+                    deliver = (fi, qty)
+                    break
+            if deliver:
+                dn = frappe.new_doc("Delivery Note")
+                dn.customer = "Vivid Plastics"
+                dn.company = company
+                dn.set_posting_time = 1
+                dn.posting_date = add_days(today(), -2)
+                dn.append("items", {"item_code": deliver[0], "qty": 50, "warehouse": wh_fg, "uom": "KG"})
+                dn.insert(ignore_permissions=True)
+                dn.submit()
+                out["delivery_note"] = dn.name
+    except Exception as e:
+        out["dn_error"] = str(e)
+    frappe.db.commit()
+    print(out)
+
+
+def create_delivery_example():
+    from frappe.utils import today
+    frappe.set_user("Administrator")
+    if frappe.get_all("Delivery Note", filters={"docstatus": 1}, limit=1):
+        print("delivery already exists")
+        return
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    abbr = frappe.db.get_value("Company", company, "abbr")
+    wh_fg = f"Finished Goods - {abbr}"
+    bins = frappe.db.sql(
+        "SELECT item_code, actual_qty FROM `tabBin` WHERE warehouse=%s AND actual_qty>60 ORDER BY actual_qty DESC LIMIT 1",
+        wh_fg, as_dict=True)
+    if not bins:
+        print("no FG stock available")
+        return
+    item = bins[0].item_code
+    dn = frappe.new_doc("Delivery Note")
+    dn.customer = "Vivid Plastics"
+    dn.company = company
+    dn.posting_date = today()
+    dn.append("items", {"item_code": item, "qty": 50, "warehouse": wh_fg, "uom": "KG"})
+    dn.insert(ignore_permissions=True)
+    dn.submit()
+    frappe.db.commit()
+    print("delivery_note", dn.name, "item", item)
