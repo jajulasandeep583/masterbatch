@@ -89,7 +89,8 @@
       "fieldname": "qc_status",
       "fieldtype": "Select",
       "label": "QC Status",
-      "options": "\nPending\nPassed\nFailed"
+      "options": "\nPending\nPassed\nFailed",
+      "allow_on_submit": 1
     },
     {
       "fieldname": "remarks",

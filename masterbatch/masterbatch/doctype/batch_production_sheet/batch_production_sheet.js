@@ -12,6 +12,13 @@ frappe.ui.form.on('Batch Production Sheet', {
             frm.add_custom_button('⟳ Load Raw Materials from Recipe', () => fill_recipe(frm, true))
                 .removeClass('btn-default').addClass('btn-primary');
         }
+        // QC step (after production): mark the finished goods Passed / Failed
+        if (frm.doc.docstatus === 1 && frm.doc.qc_status !== 'Passed' && !frm.doc.stock_entry) {
+            frm.add_custom_button('✓ QC Passed', () => set_qc(frm, 'Passed'))
+                .removeClass('btn-default').addClass('btn-success');
+            frm.add_custom_button('✗ QC Failed', () => set_qc(frm, 'Failed'))
+                .removeClass('btn-default').addClass('btn-danger');
+        }
         if (frm.doc.docstatus === 1 && !frm.doc.stock_entry) {
             const passed = (frm.doc.qc_status === 'Passed');
             const btn = frm.add_custom_button('▶ Create Stock Entry (post production)', () => {
@@ -58,6 +65,14 @@ frappe.ui.form.on('Batch Production Sheet', {
         if (frm.doc.formulation_no && frm.doc.planned_qty) fill_recipe(frm, false);
     }
 });
+
+// QC decision on the finished goods (works after submit via allow_on_submit)
+function set_qc(frm, status) {
+    frappe.db.set_value('Batch Production Sheet', frm.doc.name, 'qc_status', status).then(() => {
+        frappe.show_alert({ message: 'QC marked ' + status, indicator: status === 'Passed' ? 'green' : 'red' });
+        frm.reload_doc();
+    });
+}
 
 // find the approved formulation for the finished item, then load it
 function load_recipe_for_item(frm) {

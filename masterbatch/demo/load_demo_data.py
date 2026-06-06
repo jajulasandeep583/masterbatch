@@ -1023,3 +1023,11 @@ def fix_artifacts():
     frappe.db.commit()
     print("artifacts fixed; active batches:",
           frappe.db.count("Batch Production Sheet", {"docstatus": 1}))
+
+
+def check_js():
+    m = frappe.get_meta("Batch Production Sheet")
+    m.add_code()
+    js = m.get("__js") or ""
+    print("has_fill_recipe:", "fill_recipe" in js)
+    print("js_len:", len(js))
