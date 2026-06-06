@@ -745,3 +745,20 @@ def build_demo_workspace2():
     ws.insert(ignore_permissions=True)
     frappe.db.commit()
     print(f"OK cards={card_names} charts={chart_names}")
+
+
+def debug_render_cc():
+    import frappe, traceback
+    frappe.set_user("Administrator")
+    from werkzeug.test import EnvironBuilder
+    from werkzeug.wrappers import Request
+    frappe.local.request = Request(EnvironBuilder(path="/capital-colours", method="GET").get_environ())
+    frappe.local.form_dict = frappe._dict()
+    try:
+        from frappe.website.page_renderers.template_page import TemplatePage
+        tp = TemplatePage(path="capital-colours", http_status_code=200)
+        print("can_render:", tp.can_render())
+        resp = tp.render()
+        print("rendered OK, status", getattr(resp, "status_code", "?"))
+    except Exception:
+        traceback.print_exc()

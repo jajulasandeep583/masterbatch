@@ -1,0 +1,183 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<style>
+  .navbar, .web-footer, footer, .page-head, #navbar-breadcrumbs { display:none !important; }
+  body { margin:0; background:#0f0a14; }
+  .page_content, .container { padding:0 !important; margin:0 !important; max-width:100% !important; }
+  .cc * { box-sizing:border-box; }
+  .cc { font-family:'Segoe UI',Inter,Calibri,sans-serif; color:#23232b; }
+  .cc-wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
+  .cc-bar { background:#16091c; color:#fff; padding:14px 0; }
+  .cc-bar .cc-wrap { display:flex; align-items:center; justify-content:space-between; }
+  .cc-logo { font-weight:800; font-size:20px; letter-spacing:.5px; }
+  .cc-logo span { color:#C77DFF; }
+  .cc-bar a { color:#E7CFEF; text-decoration:none; font-size:14px; margin-left:18px; }
+  .cc-hero { background:linear-gradient(135deg,#7B2D8B 0%,#4A1259 60%,#16091c 100%); color:#fff; padding:64px 0 90px; }
+  .cc-tag { color:#E7CFEF; font-weight:700; letter-spacing:2px; font-size:13px; }
+  .cc-hero h1 { font-size:46px; margin:10px 0 8px; font-weight:800; line-height:1.1; }
+  .cc-hero p { font-size:19px; color:#EADDF2; max-width:760px; }
+  .cc-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:38px; }
+  .cc-kpi { background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:20px; backdrop-filter:blur(4px); }
+  .cc-kpi .v { font-size:34px; font-weight:800; }
+  .cc-kpi .l { font-size:13px; color:#E7CFEF; margin-top:4px; }
+  .cc-section { padding:56px 0; }
+  .cc-section.alt { background:#fff; }
+  .cc-section.grey { background:#F6F2F8; }
+  .cc-h2 { font-size:28px; font-weight:800; color:#3a1145; margin:0 0 6px; }
+  .cc-sub { color:#6b6b76; font-size:16px; margin:0 0 28px; }
+  .cc-flow { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .cc-step { border-radius:16px; padding:24px; color:#fff; box-shadow:0 10px 30px rgba(40,10,55,.12); }
+  .cc-step h3 { margin:0 0 4px; font-size:20px; }
+  .cc-step .cap { font-size:13px; opacity:.9; margin-bottom:14px; }
+  .cc-step ul { margin:0; padding-left:18px; line-height:1.9; font-size:15px; }
+  .cc-buy { background:linear-gradient(135deg,#00A9A5,#007e7b); }
+  .cc-make { background:linear-gradient(135deg,#7B2D8B,#4A1259); }
+  .cc-sell { background:linear-gradient(135deg,#E07B00,#b35f00); }
+  .cc-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .cc-stat { background:#fff; border:1px solid #ece3f1; border-radius:12px; padding:18px 20px; }
+  .cc-stat .v { font-size:26px; font-weight:800; color:#7B2D8B; }
+  .cc-stat .l { font-size:13px; color:#6b6b76; }
+  .cc-swatches { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+  .cc-sw { border-radius:12px; padding:16px; min-height:96px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 14px rgba(0,0,0,.08); }
+  .cc-sw .code { font-weight:800; font-size:15px; }
+  .cc-sw .name { font-size:12px; opacity:.92; }
+  .cc-bars { display:flex; flex-direction:column; gap:12px; }
+  .cc-row { display:flex; align-items:center; gap:14px; }
+  .cc-row .lab { width:90px; font-weight:700; font-size:14px; color:#3a1145; }
+  .cc-track { flex:1; background:#ece3f1; border-radius:8px; overflow:hidden; height:22px; }
+  .cc-fill { height:100%; background:linear-gradient(90deg,#7B2D8B,#00A9A5); border-radius:8px; }
+  .cc-row .val { width:90px; text-align:right; font-size:13px; color:#6b6b76; }
+  table.cc-tbl { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 6px 20px rgba(40,10,55,.08); }
+  table.cc-tbl th { background:#3a1145; color:#fff; text-align:left; padding:12px 14px; font-size:13px; }
+  table.cc-tbl td { padding:11px 14px; border-bottom:1px solid #f0eaf3; font-size:14px; }
+  .badge { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+  .b-pass { background:#e3f6e9; color:#1d8a3e; }
+  .b-fail { background:#fde4e4; color:#c0392b; }
+  .cc-cta { display:flex; flex-wrap:wrap; gap:14px; margin-top:8px; }
+  .cc-btn { display:inline-block; padding:14px 22px; border-radius:10px; font-weight:700; text-decoration:none; font-size:15px; }
+  .cc-btn.p { background:#7B2D8B; color:#fff; }
+  .cc-btn.t { background:#00A9A5; color:#fff; }
+  .cc-btn.o { background:#E07B00; color:#fff; }
+  .cc-btn.d { background:#3a1145; color:#fff; }
+  .cc-foot { background:#16091c; color:#b79ec6; text-align:center; padding:26px; font-size:13px; }
+  @media(max-width:900px){ .cc-kpis,.cc-flow,.cc-strip{grid-template-columns:repeat(2,1fr);} .cc-hero h1{font-size:34px;} }
+</style>
+
+<div class="cc">
+  <div class="cc-bar"><div class="cc-wrap">
+    <div class="cc-logo">CAPITAL <span>COLOURS</span></div>
+    <div>
+      <a href="/app/masterbatch">Workspace</a>
+      <a href="/app/query-report/Production Summary">Reports</a>
+      <a href="/app">ERPNext Desk</a>
+    </div>
+  </div></div>
+
+  <div class="cc-hero"><div class="cc-wrap">
+    <div class="cc-tag">MASTERBATCH MANUFACTURING · POWERED BY ERPNEXT</div>
+    <h1>One system to run the whole factory</h1>
+    <p>From buying raw resin to shipping coloured masterbatch — every shade, recipe, batch and order in a single connected platform.</p>
+    <div class="cc-kpis">
+      <div class="cc-kpi"><div class="v">{{ "{:,}".format(total_batches) }}</div><div class="l">Batches Produced</div></div>
+      <div class="cc-kpi"><div class="v">{{ "{:,}".format(total_output) }} kg</div><div class="l">Total Output</div></div>
+      <div class="cc-kpi"><div class="v">{{ avg_yield }}%</div><div class="l">Average Yield</div></div>
+      <div class="cc-kpi"><div class="v">{{ qc_rate }}%</div><div class="l">QC Pass Rate</div></div>
+    </div>
+  </div></div>
+
+  <div class="cc-section alt"><div class="cc-wrap">
+    <h2 class="cc-h2">How the factory runs — Buy → Make → Sell</h2>
+    <p class="cc-sub">Three simple flows. Everything below shares the same items, stock and shades.</p>
+    <div class="cc-flow">
+      <div class="cc-step cc-buy">
+        <h3>1 · BUY</h3><div class="cap">Get raw materials in</div>
+        <ul><li><b>Supplier</b> — who we buy from</li><li><b>Purchase Order</b> — what we order</li><li><b>Material Receipt</b> — goods arrive</li><li><b>Stock increases</b> automatically</li></ul>
+      </div>
+      <div class="cc-step cc-make">
+        <h3>2 · MAKE</h3><div class="cap">Turn resin into colour</div>
+        <ul><li><b>Shade Code</b> — the colour (e.g. SH-W01)</li><li><b>BOM / Formulation</b> — the recipe</li><li><b>Batch Production Sheet</b> — what we made</li><li><b>QC</b> — Passed / Failed</li></ul>
+      </div>
+      <div class="cc-step cc-sell">
+        <h3>3 · SELL</h3><div class="cap">Ship to customers</div>
+        <ul><li><b>Customer</b> — who buys</li><li><b>Sales Order</b> — what they ordered</li><li><b>Delivery</b> — goods out</li><li><b>Invoice</b> — get paid</li></ul>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="cc-section grey"><div class="cc-wrap">
+    <h2 class="cc-h2">Master data — the foundation</h2>
+    <p class="cc-sub">Set up once, used everywhere.</p>
+    <div class="cc-strip">
+      <div class="cc-stat"><div class="v">{{ n_rm }}</div><div class="l">Raw Materials</div></div>
+      <div class="cc-stat"><div class="v">{{ n_fg }}</div><div class="l">Finished Masterbatches</div></div>
+      <div class="cc-stat"><div class="v">{{ n_shades }}</div><div class="l">Shade Codes</div></div>
+      <div class="cc-stat"><div class="v">{{ n_boms }}</div><div class="l">Recipes (BOM)</div></div>
+      <div class="cc-stat"><div class="v">{{ n_suppliers }}</div><div class="l">Suppliers</div></div>
+      <div class="cc-stat"><div class="v">{{ n_customers }}</div><div class="l">Customers</div></div>
+      <div class="cc-stat"><div class="v">{{ n_po }}</div><div class="l">Purchase Orders</div></div>
+      <div class="cc-stat"><div class="v">{{ n_so }}</div><div class="l">Sales Orders</div></div>
+    </div>
+  </div></div>
+
+  <div class="cc-section alt"><div class="cc-wrap">
+    <h2 class="cc-h2">Our shade range</h2>
+    <p class="cc-sub">Every colour we make has a Shade Code linked to its recipe and production history.</p>
+    <div class="cc-swatches">
+      {% for s in shades %}
+      <div class="cc-sw" style="background:{{ s.bg }}; color:{{ s.fg }};">
+        <div class="code">{{ s.shade_code }}</div>
+        <div class="name">{{ s.shade_name }}<br>{{ s.product_type }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div></div>
+
+  <div class="cc-section grey"><div class="cc-wrap">
+    <h2 class="cc-h2">Top shades by output</h2>
+    <p class="cc-sub">Which colours we produce the most (last 30 days).</p>
+    <div class="cc-bars">
+      {% for t in top_shades %}
+      <div class="cc-row">
+        <div class="lab">{{ t.shade_code }}</div>
+        <div class="cc-track"><div class="cc-fill" style="width:{{ t.pct }}%"></div></div>
+        <div class="val">{{ "{:,}".format(t.outp) }} kg</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div></div>
+
+  <div class="cc-section alt"><div class="cc-wrap">
+    <h2 class="cc-h2">Recent production</h2>
+    <p class="cc-sub">The latest batches off the line — fully traceable.</p>
+    <table class="cc-tbl">
+      <tr><th>Batch</th><th>Date</th><th>Finished Item</th><th>Shade</th><th>Planned</th><th>Output</th><th>Yield</th><th>QC</th></tr>
+      {% for r in recent %}
+      <tr>
+        <td><b>{{ r.batch_no }}</b></td>
+        <td>{{ r.production_date }}</td>
+        <td>{{ r.finished_item }}</td>
+        <td>{{ r.shade_code }}</td>
+        <td>{{ r.planned_qty|int }} kg</td>
+        <td>{{ r.actual_output_kg|int }} kg</td>
+        <td>{{ r.yield_pct }}%</td>
+        <td>{% if r.qc_status=='Passed' %}<span class="badge b-pass">Passed</span>{% else %}<span class="badge b-fail">{{ r.qc_status or 'Pending' }}</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div></div>
+
+  <div class="cc-section grey"><div class="cc-wrap">
+    <h2 class="cc-h2">Reports managers actually use</h2>
+    <p class="cc-sub">One click — no spreadsheets, no waiting.</p>
+    <div class="cc-cta">
+      <a class="cc-btn p" href="/app/query-report/Production Summary">📊 Production Summary (yield %)</a>
+      <a class="cc-btn o" href="/app/query-report/Raw Material Consumption">🧪 Raw Material Consumption</a>
+      <a class="cc-btn t" href="/app/query-report/Shade-wise Production">🎨 Shade-wise Production</a>
+      <a class="cc-btn d" href="/app/masterbatch">🏭 Full Masterbatch Workspace</a>
+    </div>
+  </div></div>
+
+  <div class="cc-foot">Capital Colours · Masterbatch Manufacturing on ERPNext · Live demo dashboard</div>
+</div>
+{% endblock %}
