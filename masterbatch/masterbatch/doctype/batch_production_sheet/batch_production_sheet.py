@@ -14,6 +14,34 @@ class BatchProductionSheet(Document):
 
 
 @frappe.whitelist()
+def find_formulation(finished_item):
+    """Return the approved Lab Formulation for a finished item (so the batch can auto-load its recipe)."""
+    return frappe.db.get_value(
+        "Lab Formulation",
+        {"finished_item": finished_item, "docstatus": 1},
+        "name",
+    ) or frappe.db.get_value("Lab Formulation", {"finished_item": finished_item}, "name")
+
+
+@frappe.whitelist()
+def get_formulation_items(formulation, planned_qty=0):
+    """Return the recipe rows, scaled to the planned batch quantity, to auto-fill the batch sheet."""
+    planned_qty = float(planned_qty or 0)
+    lf = frappe.get_doc("Lab Formulation", formulation)
+    rows = []
+    for it in lf.formulation_items:
+        plan = round((it.qty_per_100kg / 100.0) * planned_qty, 3) if planned_qty else it.qty_per_100kg
+        rows.append({
+            "item_code": it.item_code,
+            "item_name": it.item_name or frappe.db.get_value("Item", it.item_code, "item_name"),
+            "planned_qty": plan,
+            "qty_consumed": plan,
+            "uom": "KG",
+        })
+    return {"finished_item": lf.finished_item, "shade_code": lf.shade_code, "items": rows}
+
+
+@frappe.whitelist()
 def make_stock_entry(batch):
     """Post real stock for a batch: consume raw materials, produce the finished masterbatch."""
     doc = frappe.get_doc("Batch Production Sheet", batch)
