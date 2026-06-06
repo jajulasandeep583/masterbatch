@@ -95,6 +95,15 @@
       "fieldname": "remarks",
       "fieldtype": "Small Text",
       "label": "Remarks"
+    },
+    {
+      "fieldname": "amended_from",
+      "fieldtype": "Link",
+      "label": "Amended From",
+      "options": "Batch Production Sheet",
+      "no_copy": 1,
+      "print_hide": 1,
+      "read_only": 1
     }
   ],
   "permissions": [

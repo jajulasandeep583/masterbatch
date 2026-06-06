@@ -908,3 +908,118 @@ def create_delivery_example():
     dn.submit()
     frappe.db.commit()
     print("delivery_note", dn.name, "item", item)
+
+
+def test_amend():
+    import traceback
+    frappe.set_user("Administrator")
+    name = frappe.get_all("Batch Production Sheet",
+                          filters={"docstatus": 1, "stock_entry": ["is", "not set"]},
+                          limit=1, pluck="name")
+    if not name:
+        print("no batch to test")
+        return
+    name = name[0]
+    doc = frappe.get_doc("Batch Production Sheet", name)
+    doc.cancel()
+    frappe.db.commit()
+    print("cancelled:", name, "docstatus:", doc.docstatus)
+    amended = frappe.copy_doc(doc)
+    amended.amended_from = name
+    amended.docstatus = 0
+    try:
+        amended.insert()
+        print("AMEND_OK new name:", amended.name, "batch_no:", amended.batch_no)
+    except Exception:
+        traceback.print_exc()
+
+
+def cleanup_stray_batches():
+    """Remove any Batch Production Sheets not named BTCH-* (stray numeric test records)."""
+    frappe.set_user("Administrator")
+    removed = 0
+    for b in frappe.get_all("Batch Production Sheet", fields=["name", "docstatus"]):
+        if not str(b.name).startswith("BTCH-"):
+            try:
+                if b.docstatus == 1:
+                    d = frappe.get_doc("Batch Production Sheet", b.name)
+                    if d.stock_entry and frappe.db.exists("Stock Entry", d.stock_entry):
+                        se = frappe.get_doc("Stock Entry", d.stock_entry)
+                        if se.docstatus == 1:
+                            se.cancel()
+                        frappe.delete_doc("Stock Entry", d.stock_entry, force=1, ignore_permissions=True)
+                    d.cancel()
+                frappe.delete_doc("Batch Production Sheet", b.name, force=1, ignore_permissions=True)
+                removed += 1
+            except Exception as e:
+                print("skip", b.name, e)
+    frappe.db.commit()
+    print("stray batches removed:", removed)
+
+
+def create_so_client_script():
+    """Add a 'Create Batch' button on Sales Order that opens a Batch Production Sheet with the item prefilled."""
+    frappe.set_user("Administrator")
+    name = "SO Create Batch"
+    js = (
+        "frappe.ui.form.on('Sales Order', {\n"
+        "  refresh(frm) {\n"
+        "    if (frm.doc.docstatus === 1) {\n"
+        "      frm.add_custom_button('\\u25B6 Create Batch (produce)', () => {\n"
+        "        const rows = (frm.doc.items || []).filter(r => r.item_code);\n"
+        "        if (!rows.length) { frappe.msgprint('No items on this order.'); return; }\n"
+        "        const go = (it) => {\n"
+        "          frappe.route_options = { finished_item: it.item_code, planned_qty: it.qty };\n"
+        "          frappe.new_doc('Batch Production Sheet');\n"
+        "        };\n"
+        "        if (rows.length === 1) { go(rows[0]); return; }\n"
+        "        const d = new frappe.ui.Dialog({\n"
+        "          title: 'Produce which item?',\n"
+        "          fields: [{ fieldname: 'item', label: 'Item', fieldtype: 'Select',\n"
+        "                     options: rows.map(r => r.item_code).join('\\n') }],\n"
+        "          primary_action_label: 'Create Batch',\n"
+        "          primary_action(v) { d.hide(); go(rows.find(r => r.item_code === v.item)); }\n"
+        "        });\n"
+        "        d.show();\n"
+        "      }).removeClass('btn-default').addClass('btn-primary');\n"
+        "    }\n"
+        "  }\n"
+        "});\n"
+    )
+    if frappe.db.exists("Client Script", name):
+        cs = frappe.get_doc("Client Script", name)
+    else:
+        cs = frappe.new_doc("Client Script")
+        cs.name = name
+    cs.dt = "Sales Order"
+    cs.view = "Form"
+    cs.enabled = 1
+    cs.script = js
+    cs.save(ignore_permissions=True)
+    frappe.db.commit()
+    print("Sales Order client script ready")
+
+
+def fix_artifacts():
+    frappe.set_user("Administrator")
+    # remove stray batch "2" and its stock entry
+    if frappe.db.exists("Batch Production Sheet", "2"):
+        d = frappe.get_doc("Batch Production Sheet", "2")
+        se = d.stock_entry
+        d.db_set("stock_entry", None)
+        if d.docstatus == 1:
+            d.cancel()
+        frappe.delete_doc("Batch Production Sheet", "2", force=1, ignore_permissions=True)
+        if se and frappe.db.exists("Stock Entry", se):
+            s = frappe.get_doc("Stock Entry", se)
+            if s.docstatus == 1:
+                s.cancel()
+            frappe.delete_doc("Stock Entry", se, force=1, ignore_permissions=True)
+    # submit the amended batch so it becomes the active record (realistic amend example)
+    if frappe.db.exists("Batch Production Sheet", "BTCH-0082-1"):
+        a = frappe.get_doc("Batch Production Sheet", "BTCH-0082-1")
+        if a.docstatus == 0:
+            a.submit()
+    frappe.db.commit()
+    print("artifacts fixed; active batches:",
+          frappe.db.count("Batch Production Sheet", {"docstatus": 1}))

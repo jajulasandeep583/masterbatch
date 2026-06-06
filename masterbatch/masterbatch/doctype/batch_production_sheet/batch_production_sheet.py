@@ -50,6 +50,13 @@ def make_stock_entry(batch):
     if not doc.consumption_items:
         frappe.throw("No raw-material consumption rows to post.")
 
+    # Finished-goods quality gate: only QC-passed batches enter sellable stock
+    if (doc.qc_status or "").strip() != "Passed":
+        frappe.throw(
+            f"Batch {doc.batch_no}: finished goods can move to sellable stock only after "
+            f"QC is <b>Passed</b> (current QC status: {doc.qc_status or 'Pending'})."
+        )
+
     company = frappe.db.get_single_value("Global Defaults", "default_company")
     abbr = frappe.db.get_value("Company", company, "abbr")
     wh_src = f"Stores - {abbr}"
