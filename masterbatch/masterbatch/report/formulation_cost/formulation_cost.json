@@ -1,0 +1,13 @@
+{
+  "name": "Formulation Cost",
+  "doctype": "Report",
+  "report_type": "Script Report",
+  "ref_doctype": "Lab Formulation",
+  "is_standard": "Yes",
+  "module": "Masterbatch",
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}

@@ -2,7 +2,9 @@
   "name": "Lab Formulation",
   "module": "Masterbatch",
   "doctype": "DocType",
+  "autoname": "field:formulation_no",
   "is_submittable": 1,
+  "title_field": "finished_item",
   "fields": [
     {
       "fieldname": "formulation_no",
@@ -23,7 +25,17 @@
       "fieldtype": "Link",
       "label": "Finished Item",
       "options": "Item",
-      "reqd": 1
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nApproved",
+      "default": "Draft",
+      "in_list_view": 1,
+      "read_only": 1
     },
     {
       "fieldname": "date",
@@ -34,13 +46,20 @@
       "fieldname": "batch_size_kg",
       "fieldtype": "Float",
       "label": "Batch Size (KG)",
-      "default": "500"
+      "default": "100"
     },
     {
       "fieldname": "formulation_items",
       "fieldtype": "Table",
       "label": "Formulation Items",
       "options": "Lab Formulation Item"
+    },
+    {
+      "fieldname": "bom",
+      "fieldtype": "Link",
+      "label": "Production BOM",
+      "options": "BOM",
+      "read_only": 1
     },
     {
       "fieldname": "remarks",
@@ -57,17 +76,8 @@
   "permissions": [
     {
       "role": "System Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1,
-      "submit": 1,
-      "cancel": 1,
-      "report": 1,
-      "export": 1,
-      "print": 1,
-      "email": 1,
-      "share": 1
+      "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1,
+      "report": 1, "export": 1, "print": 1, "email": 1, "share": 1
     }
   ]
 }

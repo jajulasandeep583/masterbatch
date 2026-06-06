@@ -41,6 +41,7 @@ def get_context(context):
     context.n_rm = frappe.db.count("Item", {"item_group": "Raw Materials - MB"})
     context.n_fg = frappe.db.count("Item", {"item_group": "Finished Goods - MB"})
     context.n_shades = frappe.db.count("Shade Code")
+    context.n_formulations = frappe.db.count("Lab Formulation")
     context.n_boms = frappe.db.count("BOM")
     context.n_customers = frappe.db.count("Customer")
     context.n_suppliers = frappe.db.count("Supplier")
@@ -67,11 +68,32 @@ def get_context(context):
     context.top_shades = top
 
     context.recent = frappe.db.sql("""
-        SELECT batch_no, production_date, finished_item, shade_code,
+        SELECT batch_no, production_date, finished_item, shade_code, formulation_no,
                planned_qty, actual_output_kg, qc_status,
                ROUND(actual_output_kg/NULLIF(planned_qty,0)*100,1) yield_pct
         FROM `tabBatch Production Sheet` WHERE docstatus=1
         ORDER BY production_date DESC, batch_no DESC LIMIT 8
     """, as_dict=True)
+
+    forms = frappe.db.sql("""
+        SELECT lf.name formulation_no, lf.finished_item, lf.shade_code, lf.bom, lf.status,
+               COUNT(lfi.name) ingredients,
+               ROUND(SUM(lfi.qty_per_100kg*IFNULL(it.valuation_rate,0))/100,2) cost_kg
+        FROM `tabLab Formulation` lf
+        LEFT JOIN `tabLab Formulation Item` lfi ON lfi.parent=lf.name
+        LEFT JOIN `tabItem` it ON it.name=lfi.item_code
+        GROUP BY lf.name ORDER BY cost_kg DESC
+    """, as_dict=True)
+    context.formulations = forms
+
+    if forms:
+        context.sample_form = forms[len(forms) // 2]
+        context.sample_items = frappe.db.sql("""
+            SELECT item_code, item_name, qty_per_100kg
+            FROM `tabLab Formulation Item` WHERE parent=%s ORDER BY qty_per_100kg DESC
+        """, context.sample_form.formulation_no, as_dict=True)
+    else:
+        context.sample_form = None
+        context.sample_items = []
 
     return context

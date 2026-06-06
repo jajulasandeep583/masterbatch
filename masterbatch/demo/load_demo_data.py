@@ -762,3 +762,55 @@ def debug_render_cc():
         print("rendered OK, status", getattr(resp, "status_code", "?"))
     except Exception:
         traceback.print_exc()
+
+
+def create_lab_formulations():
+    """Create approved Lab Formulations from the BOM recipes and link every batch."""
+    frappe.set_user("Administrator")
+    fg_shade = {fg[0]: fg[3] for fg in FINISHED_GOODS}
+    fg_name = {fg[0]: fg[1] for fg in FINISHED_GOODS}
+
+    created = 0
+    for fg_item, recipe in BOMS.items():
+        fno = "LF-" + fg_item
+        if frappe.db.exists("Lab Formulation", fno):
+            continue
+        doc = frappe.new_doc("Lab Formulation")
+        doc.formulation_no = fno
+        doc.shade_code = fg_shade.get(fg_item)
+        doc.finished_item = fg_item
+        doc.date = add_days(today(), -45)
+        doc.batch_size_kg = 100
+        doc.approved_by = "Administrator"
+        doc.remarks = f"Approved lab recipe for {fg_name.get(fg_item, fg_item)}"
+        for rm, pct in recipe:
+            doc.append("formulation_items", {"item_code": rm, "qty_per_100kg": pct, "uom": "KG"})
+        doc.insert(ignore_permissions=True)
+        doc.submit()
+        created += 1
+    frappe.db.commit()
+
+    linked = 0
+    for b in frappe.get_all("Batch Production Sheet", fields=["name", "finished_item"]):
+        fno = "LF-" + (b.finished_item or "")
+        if frappe.db.exists("Lab Formulation", fno):
+            frappe.db.set_value("Batch Production Sheet", b.name, "formulation_no", fno, update_modified=False)
+            linked += 1
+    frappe.db.commit()
+    print(f"formulations created={created}, batches linked={linked}")
+
+
+def add_formcost_shortcut():
+    import json
+    frappe.set_user("Administrator")
+    ws = frappe.get_doc("Workspace", "Masterbatch")
+    if not any((s.link_to == "Formulation Cost") for s in ws.shortcuts):
+        ws.append("shortcuts", {"label": "Formulation Cost", "link_to": "Formulation Cost",
+                                "type": "Report", "color": "#9C27B0"})
+        content = json.loads(ws.content or "[]")
+        content.append({"id": frappe.generate_hash(length=10), "type": "shortcut",
+                        "data": {"shortcut_name": "Formulation Cost", "col": 4}})
+        ws.content = json.dumps(content)
+        ws.save(ignore_permissions=True)
+        frappe.db.commit()
+    print("workspace shortcut added")
