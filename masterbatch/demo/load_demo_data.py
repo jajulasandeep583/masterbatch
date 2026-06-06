@@ -1031,3 +1031,34 @@ def check_js():
     js = m.get("__js") or ""
     print("has_fill_recipe:", "fill_recipe" in js)
     print("js_len:", len(js))
+
+
+def debug_guest():
+    import traceback
+    frappe.set_user("Guest")
+    try:
+        from masterbatch.api import cockpit_data
+        r = cockpit_data()
+        print("GUEST_OK keys:", list(r.keys()))
+    except Exception:
+        traceback.print_exc()
+
+
+def last_err():
+    rows = frappe.get_all("Error Log", fields=["error"], order_by="creation desc", limit=1)
+    print(rows[0].error[-2500:] if rows else "none")
+
+
+def debug_render_guest():
+    import traceback
+    frappe.set_user("Guest")
+    from werkzeug.test import EnvironBuilder
+    from werkzeug.wrappers import Request
+    frappe.local.request = Request(EnvironBuilder(path="/capital-colours", method="GET").get_environ())
+    frappe.local.form_dict = frappe._dict()
+    try:
+        from frappe.website.page_renderers.template_page import TemplatePage
+        TemplatePage(path="capital-colours", http_status_code=200).render()
+        print("RENDER_OK")
+    except Exception:
+        traceback.print_exc()

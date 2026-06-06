@@ -15,22 +15,22 @@ def execute(filters=None):
         {"label": "Production BOM",     "fieldname": "bom",            "fieldtype": "Link",  "options": "BOM", "width": 150},
     ]
 
-    rows = frappe.db.sql("""
+    cond = "lf.docstatus < 2"
+    if filters.get("finished_item"):
+        cond += " AND lf.finished_item = %(finished_item)s"
+
+    rows = frappe.db.sql(f"""
         SELECT
-            lf.name AS formulation_no,
-            lf.finished_item,
-            lf.shade_code,
-            lf.status,
-            lf.bom,
+            lf.name AS formulation_no, lf.finished_item, lf.shade_code, lf.status, lf.bom,
             COUNT(lfi.name) AS ingredients,
             ROUND(SUM(lfi.qty_per_100kg * IFNULL(it.valuation_rate, 0)), 2) AS cost_100
         FROM `tabLab Formulation` lf
         LEFT JOIN `tabLab Formulation Item` lfi ON lfi.parent = lf.name
         LEFT JOIN `tabItem` it ON it.name = lfi.item_code
-        WHERE lf.docstatus < 2
+        WHERE {cond}
         GROUP BY lf.name
         ORDER BY cost_100 DESC
-    """, as_dict=True)
+    """, filters, as_dict=True)
 
     for r in rows:
         r["cost_kg"] = round((r.cost_100 or 0) / 100.0, 2)
@@ -49,11 +49,8 @@ def execute(filters=None):
 
     top = rows[:12]
     chart = {
-        "data": {
-            "labels": [r.shade_code or r.formulation_no for r in top],
-            "datasets": [{"name": "Material Cost / KG", "values": [r.cost_kg for r in top]}],
-        },
+        "data": {"labels": [r.shade_code or r.formulation_no for r in top],
+                 "datasets": [{"name": "Material Cost / KG", "values": [r.cost_kg for r in top]}]},
         "type": "bar", "colors": ["#7B2D8B"],
     }
-
     return columns, rows, None, chart, report_summary

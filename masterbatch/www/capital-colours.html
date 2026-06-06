@@ -99,6 +99,46 @@
     </div>
   </div></div>
 
+  <div class="cc-section grey"><div class="cc-wrap">
+    <h2 class="cc-h2">Live operations</h2>
+    <p class="cc-sub">Real-time pulse of the plant — updates as you work.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+      <div style="background:linear-gradient(135deg,#7B2D8B,#4A1259);border-radius:16px;padding:22px;color:#fff;box-shadow:0 8px 22px rgba(40,10,55,.18)">
+        <div style="font-size:13px;opacity:.9;font-weight:600">TODAY'S OUTPUT</div>
+        <div style="font-size:32px;font-weight:800">{{ "{:,}".format(ops.today_output or 0) }} kg</div>
+        <div style="font-size:12px;opacity:.85">{{ ops.today_batches or 0 }} batches produced today</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#00A9A5,#007e7b);border-radius:16px;padding:22px;color:#fff;box-shadow:0 8px 22px rgba(40,10,55,.18)">
+        <div style="font-size:13px;opacity:.9;font-weight:600">OUTPUT THIS MONTH</div>
+        <div style="font-size:32px;font-weight:800">{{ "{:,}".format(ops.month_output or 0) }} kg</div>
+        <div style="font-size:12px;opacity:.85">{{ ops.month_batches or 0 }} batches this month</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#E07B00,#b35f00);border-radius:16px;padding:22px;color:#fff;box-shadow:0 8px 22px rgba(40,10,55,.18)">
+        <div style="font-size:13px;opacity:.9;font-weight:600">RAW MATERIAL CONSUMED</div>
+        <div style="font-size:32px;font-weight:800">{{ "{:,}".format(ops.month_consumed or 0) }} kg</div>
+        <div style="font-size:12px;opacity:.85">this month</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#2BA84A,#1e7d34);border-radius:16px;padding:22px;color:#fff;box-shadow:0 8px 22px rgba(40,10,55,.18)">
+        <div style="font-size:13px;opacity:.9;font-weight:600">FINISHED GOODS STOCK</div>
+        <div style="font-size:32px;font-weight:800">₹ {{ "{:,}".format(ops.fg_stock_value or 0) }}</div>
+        <div style="font-size:12px;opacity:.85">{{ "{:,}".format(ops.fg_stock_qty or 0) }} kg in store</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#C2185B,#7d0f3a);border-radius:16px;padding:22px;color:#fff;box-shadow:0 8px 22px rgba(40,10,55,.18)">
+        <div style="font-size:13px;opacity:.9;font-weight:600">ORDERS TO DELIVER</div>
+        <div style="font-size:32px;font-weight:800">{{ ops.pending_deliveries or 0 }}</div>
+        <div style="font-size:12px;opacity:.85">₹ {{ "{:,}".format(ops.pending_value or 0) }} pending</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#2D6CDF,#1b4ea8);border-radius:16px;padding:22px;color:#fff;box-shadow:0 8px 22px rgba(40,10,55,.18)">
+        <div style="font-size:13px;opacity:.9;font-weight:600">OPEN PURCHASE ORDERS</div>
+        <div style="font-size:32px;font-weight:800">{{ ops.open_pos or 0 }}</div>
+        <div style="font-size:12px;opacity:.85">awaiting raw material</div>
+      </div>
+    </div>
+    <div style="margin-top:18px;text-align:center">
+      <a href="/app/manufacturing-cockpit" style="display:inline-block;padding:13px 26px;border-radius:10px;background:#3a1145;color:#fff;font-weight:700;text-decoration:none">🏭 Open the full Manufacturing Cockpit →</a>
+    </div>
+  </div></div>
+
   <div class="cc-section alt"><div class="cc-wrap">
     <h2 class="cc-h2">How the factory runs — Lab → Buy → Make → Sell</h2>
     <p class="cc-sub">The lab creates the recipe; the rest of the flow turns it into shipped colour.</p>

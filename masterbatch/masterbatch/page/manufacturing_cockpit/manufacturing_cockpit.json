@@ -1,0 +1,11 @@
+{
+ "name": "manufacturing-cockpit",
+ "doctype": "Page",
+ "module": "Masterbatch",
+ "page_name": "manufacturing-cockpit",
+ "title": "Manufacturing Cockpit",
+ "standard": "Yes",
+ "roles": [
+  { "role": "System Manager" }
+ ]
+}

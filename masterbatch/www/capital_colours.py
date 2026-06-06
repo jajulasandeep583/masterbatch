@@ -96,4 +96,10 @@ def get_context(context):
         context.sample_form = None
         context.sample_items = []
 
+    try:
+        from masterbatch.api import cockpit_data
+        context.ops = cockpit_data()
+    except Exception:
+        context.ops = {}
+
     return context
