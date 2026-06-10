@@ -18,6 +18,9 @@ fixtures = [
 # after_install (run demo loader manually) = "masterbatch.setup.after_install"
 
 
+# keep desk sidebar links in the same tab (see public/js/sidebar_fix.js)
+app_include_js = ["/assets/masterbatch/js/sidebar_fix.js"]
+
 # --- App branding / launcher (added for demo) ---
 app_logo_url = "/assets/masterbatch/images/masterbatch-logo.svg"
 app_icon = "manufacturing"
