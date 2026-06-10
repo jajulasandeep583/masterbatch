@@ -1,0 +1,164 @@
+frappe.query_reports["Creditors Summary"] = {
+	filters: [
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+			reqd: 1,
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			default: (function () {
+				var parts = frappe.datetime.get_today().split("-");
+				var y = parseInt(parts[0]), m = parseInt(parts[1]);
+				return (m >= 4 ? y : y - 1) + "-04-01";
+			})(),
+			reqd: 1,
+		},
+		{
+			fieldname: "as_on_date",
+			label: __("As On Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.get_today(),
+			reqd: 1,
+		},
+	],
+	tree: true,
+	name_field: "row_id",
+	parent_field: "parent_id",
+	initial_depth: 0,
+
+	onload: function (report) {
+		report.page.add_inner_button(__("Export to Excel"), function () {
+			const data = frappe.query_report.data;
+			if (!data || !data.length) {
+				frappe.msgprint(__("No data to export."));
+				return;
+			}
+
+			function formatCurrency(val) {
+				var num = parseFloat(val) || 0;
+				return num.toLocaleString("en-IN", {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2
+				});
+			}
+
+			var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+					 + 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
+					 + 'xmlns="http://www.w3.org/TR/REC-html40">';
+			html += '<head><meta charset="UTF-8">';
+			html += '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>';
+			html += '<x:ExcelWorksheet><x:Name>Creditors Summary</x:Name>';
+			html += '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>';
+			html += '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+			html += '</head><body>';
+			html += '<table border="1" style="border-collapse:collapse;font-family:Calibri;font-size:11pt;">';
+
+			// Header row
+			html += '<tr style="background-color:#5e1a1a;">';
+			html += '<td style="font-weight:bold;color:#ffffff;padding:6px 10px;width:350pt;">Supplier</td>';
+			html += '<td style="font-weight:bold;color:#ffffff;padding:6px 10px;width:100pt;text-align:right;">Opening</td>';
+			html += '<td style="font-weight:bold;color:#ffffff;padding:6px 10px;width:100pt;text-align:right;">Invoiced</td>';
+			html += '<td style="font-weight:bold;color:#ffffff;padding:6px 10px;width:100pt;text-align:right;">Paid</td>';
+			html += '<td style="font-weight:bold;color:#ffffff;padding:6px 10px;width:100pt;text-align:right;">Outstanding</td>';
+			html += '</tr>';
+
+			data.forEach(function (row) {
+				var isGroup = !row.party_id;
+				var indent = row.indent || 0;
+				var padding = (indent * 20) + "px";
+				var label = (row.label || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+				var outstanding = parseFloat(row.outstanding) || 0;
+				var osColor = outstanding > 0 ? "#c0392b" : outstanding < 0 ? "#27ae60" : "#000000";
+
+				if (isGroup) {
+					var bgColor = indent === 0 ? "#f2dede" : "#fbeaea";
+					var fontSize = indent === 0 ? "11pt" : "10.5pt";
+					html += '<tr style="background-color:' + bgColor + ';">';
+					html += '<td style="font-weight:bold;font-size:' + fontSize + ';padding:5px 8px;padding-left:' + padding + ';color:#5e1a1a;">' + label + '</td>';
+					html += '<td style="font-weight:bold;font-size:' + fontSize + ';padding:5px 8px;text-align:right;color:#7f8c8d;">' + formatCurrency(row.opening) + '</td>';
+					html += '<td style="font-weight:bold;font-size:' + fontSize + ';padding:5px 8px;text-align:right;color:#e67e22;">' + formatCurrency(row.invoiced) + '</td>';
+					html += '<td style="font-weight:bold;font-size:' + fontSize + ';padding:5px 8px;text-align:right;color:#27ae60;">' + formatCurrency(row.paid) + '</td>';
+					html += '<td style="font-weight:bold;font-size:' + fontSize + ';padding:5px 8px;text-align:right;color:' + osColor + ';">' + formatCurrency(row.outstanding) + '</td>';
+					html += '</tr>';
+				} else {
+					html += '<tr>';
+					html += '<td style="padding:4px 8px;padding-left:' + padding + ';color:#333333;">' + label + '</td>';
+					html += '<td style="padding:4px 8px;text-align:right;color:#7f8c8d;">' + formatCurrency(row.opening) + '</td>';
+					html += '<td style="padding:4px 8px;text-align:right;color:#e67e22;">' + formatCurrency(row.invoiced) + '</td>';
+					html += '<td style="padding:4px 8px;text-align:right;color:#27ae60;">' + formatCurrency(row.paid) + '</td>';
+					html += '<td style="padding:4px 8px;text-align:right;color:' + osColor + ';">' + formatCurrency(row.outstanding) + '</td>';
+					html += '</tr>';
+				}
+			});
+
+			html += '</table></body></html>';
+
+			var blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+			var url = URL.createObjectURL(blob);
+			var a = document.createElement("a");
+			var as_on = frappe.query_report.get_filter_value("as_on_date") || frappe.datetime.get_today();
+			a.href = url;
+			a.download = "Creditors_Summary_" + as_on + ".xls";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		});
+	},
+
+	formatter: function (value, row, column, data, default_formatter) {
+		value = default_formatter(value, row, column, data);
+		if (!data) return value;
+		var company = frappe.query_report.get_filter_value("company") || "";
+		var as_on_date = frappe.query_report.get_filter_value("as_on_date") || "";
+		var from_date = frappe.query_report.get_filter_value("from_date") || "";
+		if (column.fieldname === "label") {
+			if (!data.party_id) {
+				var indent = data.indent || 0;
+				if (indent === 0) {
+					value = "<span style='font-weight:700;font-size:13px;color:#5e1a1a'>"
+						+ (data.label || "") + "</span>";
+				} else {
+					value = "<span style='font-weight:600;font-size:12px;color:#7b2d2d'>"
+						+ (data.label || "") + "</span>";
+				}
+			} else {
+				var url = "/app/query-report/General Ledger"
+					+ "?company=" + encodeURIComponent(company)
+					+ "&from_date=" + encodeURIComponent(from_date)
+					+ "&to_date=" + encodeURIComponent(as_on_date)
+					+ "&party_type=" + encodeURIComponent("Supplier")
+					+ "&party=" + encodeURIComponent(data.party_id);
+				value = "<a href='" + url + "' style='color:#c0392b;font-weight:500'>"
+					+ (data.label || "")
+					+ " <span style='font-size:10px;opacity:0.7'>↗</span></a>";
+			}
+		}
+		if (column.fieldname === "opening" && value) {
+			value = "<span style='color:#7f8c8d;font-weight:500'>" + value + "</span>";
+		}
+		if (column.fieldname === "invoiced" && value) {
+			value = "<span style='color:#e67e22;font-weight:500'>" + value + "</span>";
+		}
+		if (column.fieldname === "paid" && value) {
+			value = "<span style='color:#27ae60;font-weight:500'>" + value + "</span>";
+		}
+		if (column.fieldname === "outstanding") {
+			var amt = parseFloat(data.outstanding) || 0;
+			var display = value || frappe.format(amt, { fieldtype: "Currency" });
+			if (amt > 0) {
+				value = "<span style='color:#c0392b;font-weight:700'>" + display + "</span>";
+			} else if (amt < 0) {
+				value = "<span style='color:#27ae60;font-weight:700'>" + display + "</span>";
+			}
+		}
+		return value;
+	},
+};

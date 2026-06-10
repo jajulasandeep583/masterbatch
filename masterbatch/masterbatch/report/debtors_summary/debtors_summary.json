@@ -1,0 +1,22 @@
+{
+  "name": "Debtors Summary",
+  "doctype": "Report",
+  "report_type": "Script Report",
+  "ref_doctype": "GL Entry",
+  "is_standard": "Yes",
+  "module": "Masterbatch",
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "Auditor"
+    },
+    {
+      "role": "Accounts Manager"
+    },
+    {
+      "role": "Accounts User"
+    }
+  ]
+}
