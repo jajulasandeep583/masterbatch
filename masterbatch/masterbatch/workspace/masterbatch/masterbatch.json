@@ -1,0 +1,128 @@
+{
+ "app": "masterbatch",
+ "charts": [
+  {
+   "chart_name": "Daily Production Output",
+   "label": "Daily Production Output"
+  },
+  {
+   "chart_name": "Shade-wise Output (KG)",
+   "label": "Shade-wise Output (KG)"
+  },
+  {
+   "chart_name": "Production by QC Status",
+   "label": "Production by QC Status"
+  }
+ ],
+ "content": "[{\"id\": \"d582bafe53\", \"type\": \"header\", \"data\": {\"text\": \"<span><b>Midhunatech \\u2014 Masterbatch Manufacturing</b></span>\", \"col\": 12}}, {\"id\": \"869f1d8df5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Batches\", \"col\": 3}}, {\"id\": \"7fd330e356\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Output (KG)\", \"col\": 3}}, {\"id\": \"b86981112f\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Orders\", \"col\": 3}}, {\"id\": \"ef54101e06\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Purchase Orders\", \"col\": 3}}, {\"id\": \"a6ea276710\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Daily Production Output\", \"col\": 12}}, {\"id\": \"1658f6dd4b\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Shade-wise Output (KG)\", \"col\": 8}}, {\"id\": \"eaf6b362ad\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Production by QC Status\", \"col\": 4}}, {\"id\": \"726c800f24\", \"type\": \"header\", \"data\": {\"text\": \"<span><b>Process Flow \\u2014 Shade \\u2192 Lab Recipe \\u2192 BOM \\u2192 Batch \\u2192 Stock</b></span>\", \"col\": 12}}, {\"id\": \"09fe0bd8fe\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Shade Code\", \"col\": 4}}, {\"id\": \"265e7e6aa6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Formulation\", \"col\": 4}}, {\"id\": \"c2677ea7fa\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production BOM\", \"col\": 4}}, {\"id\": \"283c2b65e0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Batch Production Sheet\", \"col\": 4}}, {\"id\": \"c5aeb9364a\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Stock Entry\", \"col\": 4}}, {\"id\": \"9479fc49d1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Summary\", \"col\": 4}}, {\"id\": \"1d0b0878e9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"RM Consumption\", \"col\": 4}}, {\"id\": \"21bcc1a3c0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Shade-wise Production\", \"col\": 4}}, {\"id\": \"cd8e40436e\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Formulation Cost\", \"col\": 4}}]",
+ "creation": "2026-06-06 19:12:20.883921",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "manufacturing",
+ "idx": 1,
+ "indicator_color": "purple",
+ "is_hidden": 0,
+ "label": "Masterbatch",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-06-10 09:50:30.798009",
+ "modified_by": "Administrator",
+ "module": "Masterbatch",
+ "name": "Masterbatch",
+ "number_cards": [
+  {
+   "label": "Total Batches",
+   "number_card_name": "Total Batches"
+  },
+  {
+   "label": "Total Output (KG)",
+   "number_card_name": "Total Output (KG)"
+  },
+  {
+   "label": "Sales Orders",
+   "number_card_name": "Sales Orders"
+  },
+  {
+   "label": "Purchase Orders",
+   "number_card_name": "Purchase Orders"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "#318AD8",
+   "doc_view": "",
+   "label": "Shade Code",
+   "link_to": "Shade Code",
+   "type": "DocType"
+  },
+  {
+   "color": "#29CD42",
+   "doc_view": "",
+   "label": "Lab Formulation",
+   "link_to": "Lab Formulation",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Production BOM",
+   "link_to": "BOM",
+   "type": "DocType"
+  },
+  {
+   "color": "#7B2D8B",
+   "doc_view": "",
+   "label": "Batch Production Sheet",
+   "link_to": "Batch Production Sheet",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Stock Entry",
+   "link_to": "Stock Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "#FFC107",
+   "doc_view": "",
+   "label": "Production Summary",
+   "link_to": "Production Summary",
+   "report_ref_doctype": "Batch Production Sheet",
+   "type": "Report"
+  },
+  {
+   "color": "#FF5858",
+   "doc_view": "",
+   "label": "RM Consumption",
+   "link_to": "Raw Material Consumption",
+   "report_ref_doctype": "Batch Production Sheet",
+   "type": "Report"
+  },
+  {
+   "color": "#00BCD4",
+   "doc_view": "",
+   "label": "Shade-wise Production",
+   "link_to": "Shade-wise Production",
+   "report_ref_doctype": "Batch Production Sheet",
+   "type": "Report"
+  },
+  {
+   "color": "#9C27B0",
+   "doc_view": "",
+   "label": "Formulation Cost",
+   "link_to": "Formulation Cost",
+   "report_ref_doctype": "Lab Formulation",
+   "type": "Report"
+  }
+ ],
+ "title": "Masterbatch",
+ "type": "Workspace"
+}

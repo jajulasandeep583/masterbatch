@@ -16,3 +16,18 @@ fixtures = [
 ]
 
 # after_install (run demo loader manually) = "masterbatch.setup.after_install"
+
+
+# --- App branding / launcher (added for demo) ---
+app_logo_url = "/assets/masterbatch/images/masterbatch-logo.svg"
+app_icon = "manufacturing"
+app_color = "#7c3aed"
+
+add_to_apps_screen = [
+    {
+        "name": "masterbatch",
+        "logo": "/assets/masterbatch/images/masterbatch-logo.svg",
+        "title": "Masterbatch",
+        "route": "/app/masterbatch",
+    }
+]
