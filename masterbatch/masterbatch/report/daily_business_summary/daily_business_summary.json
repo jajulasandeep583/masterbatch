@@ -1,0 +1,19 @@
+{
+  "name": "Daily Business Summary",
+  "doctype": "Report",
+  "report_type": "Script Report",
+  "ref_doctype": "Sales Invoice",
+  "is_standard": "Yes",
+  "module": "Masterbatch",
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "Accounts Manager"
+    },
+    {
+      "role": "Accounts User"
+    }
+  ]
+}
