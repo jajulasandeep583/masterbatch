@@ -86,6 +86,16 @@
       "label": "Operator"
     },
     {
+      "fieldname": "remarks",
+      "fieldtype": "Small Text",
+      "label": "Remarks"
+    },
+    {
+      "fieldname": "qc_section",
+      "fieldtype": "Section Break",
+      "label": "Quality Control — Certificate of Analysis"
+    },
+    {
       "fieldname": "qc_status",
       "fieldtype": "Select",
       "label": "QC Status",
@@ -93,9 +103,11 @@
       "allow_on_submit": 1
     },
     {
-      "fieldname": "remarks",
-      "fieldtype": "Small Text",
-      "label": "Remarks"
+      "fieldname": "qc_parameters",
+      "fieldtype": "Table",
+      "label": "QC Parameters (printed on COA)",
+      "options": "Batch QC Parameter",
+      "allow_on_submit": 1
     },
     {
       "fieldname": "amended_from",

@@ -12,12 +12,30 @@ frappe.ui.form.on('Batch Production Sheet', {
             frm.add_custom_button('⟳ Load Raw Materials from Recipe', () => fill_recipe(frm, true))
                 .removeClass('btn-default').addClass('btn-primary');
         }
-        // QC step (after production): mark the finished goods Passed / Failed
+        // QC step (after production): load the standard test plan, enter results, mark Passed / Failed
+        if (frm.doc.docstatus <= 1 && !(frm.doc.qc_parameters || []).length) {
+            frm.add_custom_button('🧪 Load QC Parameters', () => load_qc_params(frm))
+                .removeClass('btn-default').addClass('btn-info');
+        }
         if (frm.doc.docstatus === 1 && frm.doc.qc_status !== 'Passed' && !frm.doc.stock_entry) {
             frm.add_custom_button('✓ QC Passed', () => set_qc(frm, 'Passed'))
                 .removeClass('btn-default').addClass('btn-success');
             frm.add_custom_button('✗ QC Failed', () => set_qc(frm, 'Failed'))
                 .removeClass('btn-default').addClass('btn-danger');
+        }
+        // Certificate of Analysis straight from the batch
+        if (frm.doc.docstatus === 1) {
+            frm.add_custom_button('🖨 Print COA', () => {
+                if (!(frm.doc.qc_parameters || []).length) {
+                    frappe.msgprint('Load QC Parameters and enter results first — the COA prints these values.');
+                    return;
+                }
+                const url = '/printview?doctype=' + encodeURIComponent(frm.doc.doctype) +
+                    '&name=' + encodeURIComponent(frm.doc.name) +
+                    '&format=' + encodeURIComponent('Capital Colours COA - Batch') +
+                    '&no_letterhead=0&letterhead=' + encodeURIComponent('Capital Colours');
+                window.open(url, '_blank');
+            }).removeClass('btn-default').addClass('btn-primary');
         }
         if (frm.doc.docstatus === 1 && !frm.doc.stock_entry) {
             const passed = (frm.doc.qc_status === 'Passed');
@@ -65,6 +83,31 @@ frappe.ui.form.on('Batch Production Sheet', {
         if (frm.doc.formulation_no && frm.doc.planned_qty) fill_recipe(frm, false);
     }
 });
+
+// standard masterbatch QC test plan — QC just enters the results
+const QC_PARAMS = [
+    ['Melt Flow Index', 'g/10 min', '18.0 – 24.0', 'ASTM D1238'],
+    ['Moisture Content', '%', '≤ 0.10', 'ASTM D6980'],
+    ['Pigment Content', '%', '38.0 – 42.0', 'Muffle Furnace'],
+    ['Colour Difference (ΔE)', 'ΔE', '≤ 1.0', 'Spectrophotometer'],
+    ['Dispersion (Filter Pressure)', 'bar/g', '≤ 0.25', 'EN 13900-5'],
+    ['Density', 'g/cm³', '1.10 – 1.30', 'ASTM D792'],
+];
+
+function load_qc_params(frm) {
+    if ((frm.doc.qc_parameters || []).length) return;
+    QC_PARAMS.forEach((p) => {
+        const row = frm.add_child('qc_parameters');
+        row.parameter = p[0];
+        row.unit = p[1];
+        row.specification = p[2];
+        row.test_method = p[3];
+        row.status = 'Pass';
+    });
+    frm.refresh_field('qc_parameters');
+    frm.dirty();
+    frappe.show_alert({ message: 'Standard QC parameters loaded — enter results and Save', indicator: 'blue' });
+}
 
 // QC decision on the finished goods (works after submit via allow_on_submit)
 function set_qc(frm, status) {
