@@ -2,11 +2,35 @@ import frappe
 from frappe.model.document import Document
 
 
+def evaluate_qc_status(row):
+    """Pass/Fail for a QC row from its result vs the parameter's limits (server-side authority)."""
+    result = row.result
+    if result is None or str(result).strip() == "":
+        return row.status or "Pass"
+    et = row.evaluation_type or "Range"
+    if et == "Text Match":
+        return "Pass" if str(result).strip().lower() == str(row.target_text or "").strip().lower() else "Fail"
+    try:
+        val = float(str(result).strip())
+    except (TypeError, ValueError):
+        return "Fail"
+    mn = row.min_value or 0
+    mx = row.max_value or 0
+    if et == "Minimum":
+        return "Pass" if val >= mn else "Fail"
+    if et == "Maximum":
+        return "Pass" if val <= mx else "Fail"
+    return "Pass" if (mn <= val <= mx) else "Fail"
+
+
 class BatchProductionSheet(Document):
     def validate(self):
         if self.actual_output_kg and self.planned_qty:
             total_input = sum(r.qty_consumed or 0 for r in self.consumption_items)
             self.rejection_kg = total_input - self.actual_output_kg if total_input > self.actual_output_kg else 0
+        # auto Pass/Fail each QC parameter from its result and the master's limits
+        for row in (self.qc_parameters or []):
+            row.status = evaluate_qc_status(row)
 
     def on_submit(self):
         frappe.msgprint(f"Batch {self.batch_no} submitted. Use 'Create Stock Entry' to post stock "

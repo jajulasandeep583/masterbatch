@@ -1,0 +1,89 @@
+{
+  "name": "QC Parameter",
+  "module": "Masterbatch",
+  "doctype": "DocType",
+  "naming_rule": "By fieldname",
+  "autoname": "field:parameter_name",
+  "title_field": "parameter_name",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "parameter_name",
+      "fieldtype": "Data",
+      "label": "Parameter Name",
+      "reqd": 1,
+      "unique": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "unit",
+      "fieldtype": "Data",
+      "label": "Unit",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "test_method",
+      "fieldtype": "Data",
+      "label": "Test Method",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "cb_eval",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "evaluation_type",
+      "fieldtype": "Select",
+      "label": "Evaluation Type",
+      "options": "Range\nMinimum\nMaximum\nText Match",
+      "default": "Range",
+      "reqd": 1,
+      "description": "How a result is judged Pass/Fail."
+    },
+    {
+      "fieldname": "min_value",
+      "fieldtype": "Float",
+      "label": "Min Value",
+      "precision": "3",
+      "depends_on": "eval:['Range','Minimum'].includes(doc.evaluation_type)"
+    },
+    {
+      "fieldname": "max_value",
+      "fieldtype": "Float",
+      "label": "Max Value",
+      "precision": "3",
+      "depends_on": "eval:['Range','Maximum'].includes(doc.evaluation_type)"
+    },
+    {
+      "fieldname": "target_text",
+      "fieldtype": "Data",
+      "label": "Target Text",
+      "depends_on": "eval:doc.evaluation_type=='Text Match'"
+    },
+    {
+      "fieldname": "sb_spec",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "specification",
+      "fieldtype": "Data",
+      "label": "Specification",
+      "read_only": 1,
+      "in_list_view": 1,
+      "description": "Auto-built from evaluation type and limits; shown on the COA."
+    },
+    {
+      "fieldname": "disabled",
+      "fieldtype": "Check",
+      "label": "Disabled"
+    }
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Manufacturing Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Manufacturing User", "read": 1},
+    {"role": "Stock User", "read": 1}
+  ]
+}

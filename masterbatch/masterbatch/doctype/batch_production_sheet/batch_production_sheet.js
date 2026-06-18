@@ -12,11 +12,7 @@ frappe.ui.form.on('Batch Production Sheet', {
             frm.add_custom_button('⟳ Load Raw Materials from Recipe', () => fill_recipe(frm, true))
                 .removeClass('btn-default').addClass('btn-primary');
         }
-        // QC step (after production): load the standard test plan, enter results, mark Passed / Failed
-        if (frm.doc.docstatus <= 1 && !(frm.doc.qc_parameters || []).length) {
-            frm.add_custom_button('🧪 Load QC Parameters', () => load_qc_params(frm))
-                .removeClass('btn-default').addClass('btn-info');
-        }
+        // QC decision on the finished goods (works after submit via allow_on_submit)
         if (frm.doc.docstatus === 1 && frm.doc.qc_status !== 'Passed' && !frm.doc.stock_entry) {
             frm.add_custom_button('✓ QC Passed', () => set_qc(frm, 'Passed'))
                 .removeClass('btn-default').addClass('btn-success');
@@ -27,7 +23,7 @@ frappe.ui.form.on('Batch Production Sheet', {
         if (frm.doc.docstatus === 1) {
             frm.add_custom_button('🖨 Print COA', () => {
                 if (!(frm.doc.qc_parameters || []).length) {
-                    frappe.msgprint('Load QC Parameters and enter results first — the COA prints these values.');
+                    frappe.msgprint('Add QC Parameters and enter results first — the COA prints these values.');
                     return;
                 }
                 const url = '/printview?doctype=' + encodeURIComponent(frm.doc.doctype) +
@@ -84,29 +80,53 @@ frappe.ui.form.on('Batch Production Sheet', {
     }
 });
 
-// standard masterbatch QC test plan — QC just enters the results
-const QC_PARAMS = [
-    ['Melt Flow Index', 'g/10 min', '18.0 – 24.0', 'ASTM D1238'],
-    ['Moisture Content', '%', '≤ 0.10', 'ASTM D6980'],
-    ['Pigment Content', '%', '38.0 – 42.0', 'Muffle Furnace'],
-    ['Colour Difference (ΔE)', 'ΔE', '≤ 1.0', 'Spectrophotometer'],
-    ['Dispersion (Filter Pressure)', 'bar/g', '≤ 0.25', 'EN 13900-5'],
-    ['Density', 'g/cm³', '1.10 – 1.30', 'ASTM D792'],
-];
+// QC parameter rows: pick a parameter from the QC Parameter master -> unit / spec /
+// test method / limits auto-fill; entering a result auto-marks Pass / Fail.
+frappe.ui.form.on('Batch QC Parameter', {
+    parameter(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.parameter) return;
+        frappe.db.get_value('QC Parameter', row.parameter,
+            ['unit', 'specification', 'test_method', 'evaluation_type', 'min_value', 'max_value', 'target_text'])
+            .then((r) => {
+                const v = (r && r.message) || {};
+                frappe.model.set_value(cdt, cdn, 'unit', v.unit);
+                frappe.model.set_value(cdt, cdn, 'specification', v.specification);
+                frappe.model.set_value(cdt, cdn, 'test_method', v.test_method);
+                frappe.model.set_value(cdt, cdn, 'evaluation_type', v.evaluation_type);
+                frappe.model.set_value(cdt, cdn, 'min_value', v.min_value);
+                frappe.model.set_value(cdt, cdn, 'max_value', v.max_value);
+                frappe.model.set_value(cdt, cdn, 'target_text', v.target_text);
+                compute_qc_status(cdt, cdn);
+            });
+    },
+    result(frm, cdt, cdn) {
+        compute_qc_status(cdt, cdn);
+    }
+});
 
-function load_qc_params(frm) {
-    if ((frm.doc.qc_parameters || []).length) return;
-    QC_PARAMS.forEach((p) => {
-        const row = frm.add_child('qc_parameters');
-        row.parameter = p[0];
-        row.unit = p[1];
-        row.specification = p[2];
-        row.test_method = p[3];
-        row.status = 'Pass';
-    });
-    frm.refresh_field('qc_parameters');
-    frm.dirty();
-    frappe.show_alert({ message: 'Standard QC parameters loaded — enter results and Save', indicator: 'blue' });
+// mirror of server-side evaluate_qc_status (instant feedback in the grid)
+function compute_qc_status(cdt, cdn) {
+    const row = locals[cdt][cdn];
+    const res = row.result;
+    if (res === undefined || res === null || String(res).trim() === '') return; // no result yet
+    const et = row.evaluation_type || 'Range';
+    let status;
+    if (et === 'Text Match') {
+        status = (String(res).trim().toLowerCase() === String(row.target_text || '').trim().toLowerCase()) ? 'Pass' : 'Fail';
+    } else {
+        const val = parseFloat(String(res).trim());
+        if (isNaN(val)) {
+            status = 'Fail';
+        } else if (et === 'Minimum') {
+            status = (val >= (row.min_value || 0)) ? 'Pass' : 'Fail';
+        } else if (et === 'Maximum') {
+            status = (val <= (row.max_value || 0)) ? 'Pass' : 'Fail';
+        } else {
+            status = (val >= (row.min_value || 0) && val <= (row.max_value || 0)) ? 'Pass' : 'Fail';
+        }
+    }
+    frappe.model.set_value(cdt, cdn, 'status', status);
 }
 
 // QC decision on the finished goods (works after submit via allow_on_submit)

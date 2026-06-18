@@ -6,7 +6,8 @@
   "fields": [
     {
       "fieldname": "parameter",
-      "fieldtype": "Data",
+      "fieldtype": "Link",
+      "options": "QC Parameter",
       "label": "Parameter",
       "reqd": 1,
       "in_list_view": 1,
@@ -17,12 +18,16 @@
       "fieldname": "test_method",
       "fieldtype": "Data",
       "label": "Test Method",
+      "fetch_from": "parameter.test_method",
+      "read_only": 1,
       "allow_on_submit": 1
     },
     {
       "fieldname": "unit",
       "fieldtype": "Data",
       "label": "Unit",
+      "fetch_from": "parameter.unit",
+      "read_only": 1,
       "in_list_view": 1,
       "columns": 1,
       "allow_on_submit": 1
@@ -31,6 +36,8 @@
       "fieldname": "specification",
       "fieldtype": "Data",
       "label": "Specification",
+      "fetch_from": "parameter.specification",
+      "read_only": 1,
       "in_list_view": 1,
       "columns": 2,
       "allow_on_submit": 1
@@ -49,8 +56,47 @@
       "label": "Status",
       "options": "\nPass\nFail",
       "default": "Pass",
+      "read_only": 1,
       "in_list_view": 1,
       "columns": 2,
+      "allow_on_submit": 1
+    },
+    {
+      "fieldname": "evaluation_type",
+      "fieldtype": "Data",
+      "label": "Evaluation Type",
+      "fetch_from": "parameter.evaluation_type",
+      "hidden": 1,
+      "read_only": 1,
+      "allow_on_submit": 1
+    },
+    {
+      "fieldname": "min_value",
+      "fieldtype": "Float",
+      "label": "Min Value",
+      "precision": "3",
+      "fetch_from": "parameter.min_value",
+      "hidden": 1,
+      "read_only": 1,
+      "allow_on_submit": 1
+    },
+    {
+      "fieldname": "max_value",
+      "fieldtype": "Float",
+      "label": "Max Value",
+      "precision": "3",
+      "fetch_from": "parameter.max_value",
+      "hidden": 1,
+      "read_only": 1,
+      "allow_on_submit": 1
+    },
+    {
+      "fieldname": "target_text",
+      "fieldtype": "Data",
+      "label": "Target Text",
+      "fetch_from": "parameter.target_text",
+      "hidden": 1,
+      "read_only": 1,
       "allow_on_submit": 1
     }
   ],
