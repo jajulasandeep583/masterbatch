@@ -63,6 +63,13 @@
       "label": "Rejection (KG)"
     },
     {
+      "fieldname": "rejection_item",
+      "fieldtype": "Link",
+      "label": "Rejection Item (sellable scrap)",
+      "options": "Item",
+      "description": "Item that holds the rejected output. On the batch's Stock Entry this quantity is received into stock as scrap so it can be sold."
+    },
+    {
       "fieldname": "consumption_items",
       "fieldtype": "Table",
       "label": "Raw Material Consumption",

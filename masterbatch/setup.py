@@ -8,7 +8,8 @@ def after_install():
 
 
 # batch link on sales rows so the Certificate of Analysis knows which
-# production batch the goods were delivered from
+# production batch the goods were delivered from; plus an Available Qty
+# readout on Sales Order rows.
 COA_CUSTOM_FIELDS = {
     "Sales Invoice Item": [
         dict(
@@ -34,6 +35,19 @@ COA_CUSTOM_FIELDS = {
             columns=2,
             allow_on_submit=1,
             print_hide=1,
+        ),
+    ],
+    "Sales Order Item": [
+        dict(
+            fieldname="available_qty",
+            label="Available Qty",
+            fieldtype="Float",
+            insert_after="qty",
+            read_only=1,
+            in_list_view=1,
+            columns=1,
+            print_hide=1,
+            description="Current stock available for this item (auto-filled when the item is picked).",
         ),
     ],
 }

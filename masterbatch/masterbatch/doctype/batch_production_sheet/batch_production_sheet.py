@@ -96,6 +96,11 @@ def make_stock_entry(batch):
                                 "s_warehouse": wh_src, "uom": "KG"})
     se.append("items", {"item_code": doc.finished_item, "qty": doc.actual_output_kg,
                         "t_warehouse": wh_fg, "is_finished_item": 1, "uom": "KG"})
+    # rejection becomes sellable scrap stock under the chosen rejection item
+    if (doc.rejection_kg or 0) > 0 and doc.rejection_item:
+        se.append("items", {"item_code": doc.rejection_item, "qty": doc.rejection_kg,
+                            "t_warehouse": wh_fg, "type": "Scrap",
+                            "allow_zero_valuation_rate": 1, "uom": "KG"})
     se.insert(ignore_permissions=True)
     se.submit()
     doc.db_set("stock_entry", se.name)

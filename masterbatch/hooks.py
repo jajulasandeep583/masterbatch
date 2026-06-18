@@ -18,15 +18,18 @@ fixtures = [
 # after_install (run demo loader manually) = "masterbatch.setup.after_install"
 
 # COA: batch link fields on Sales Invoice Item / Delivery Note Item
+# + Available Qty field on Sales Order Item
 after_migrate = ["masterbatch.setup.after_migrate"]
 
 # keep desk sidebar links in the same tab (see public/js/sidebar_fix.js)
 app_include_js = ["/assets/masterbatch/js/sidebar_fix.js"]
 
-# COA print button + QC-passed batch picker on sales documents
+# COA print button + QC-passed batch picker on sales documents;
+# Sales Order: available-stock display + raw-material Material Request button
 doctype_js = {
     "Sales Invoice": "public/js/coa_button.js",
     "Delivery Note": "public/js/coa_button.js",
+    "Sales Order": "public/js/sales_order.js",
 }
 
 # --- App branding / launcher (added for demo) ---
