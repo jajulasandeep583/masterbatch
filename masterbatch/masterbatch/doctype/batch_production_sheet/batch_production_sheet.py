@@ -1,5 +1,6 @@
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt
 
 
 def evaluate_qc_status(row):
@@ -23,6 +24,12 @@ def evaluate_qc_status(row):
     return "Pass" if (mn <= val <= mx) else "Fail"
 
 
+def _stores_warehouse():
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    abbr = frappe.db.get_value("Company", company, "abbr")
+    return f"Stores - {abbr}"
+
+
 class BatchProductionSheet(Document):
     def validate(self):
         if self.actual_output_kg and self.planned_qty:
@@ -31,6 +38,36 @@ class BatchProductionSheet(Document):
         # auto Pass/Fail each QC parameter from its result and the master's limits
         for row in (self.qc_parameters or []):
             row.status = evaluate_qc_status(row)
+
+    def before_submit(self):
+        # don't let a batch submit if a raw material isn't actually in stock —
+        # replace the short item with an available one (or add stock) first.
+        self.check_raw_material_stock()
+
+    def check_raw_material_stock(self):
+        wh_src = _stores_warehouse()
+        required, names = {}, {}
+        for r in self.consumption_items:
+            if r.item_code and r.qty_consumed:
+                required[r.item_code] = required.get(r.item_code, 0) + flt(r.qty_consumed)
+                names[r.item_code] = r.item_name or r.item_code
+        short = []
+        for item_code, need in required.items():
+            avail = flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": wh_src}, "actual_qty"))
+            if avail < need:
+                short.append((item_code, names.get(item_code), need, avail))
+        if short:
+            rows = "".join(
+                "<li><b>{n}</b> ({c}): need {need:g} KG, only <b>{avail:g} KG</b> available</li>".format(
+                    n=n or c, c=c, need=need, avail=avail)
+                for c, n, need, avail in short
+            )
+            frappe.throw(
+                "These raw materials don't have enough stock in <b>{wh}</b>:<ul>{rows}</ul>"
+                "Replace the short item(s) in the <b>Raw Material Consumption</b> table with an "
+                "available raw material (or add stock), then submit the batch again.".format(wh=wh_src, rows=rows),
+                title="Insufficient Raw Material Stock",
+            )
 
     def on_submit(self):
         frappe.msgprint(f"Batch {self.batch_no} submitted. Use 'Create Stock Entry' to post stock "
