@@ -37,7 +37,7 @@
       "fieldtype": "Link",
       "label": "UOM",
       "options": "UOM",
-      "default": "KG"
+      "fetch_from": "item_code.stock_uom"
     }
   ],
   "permissions": []

@@ -185,7 +185,7 @@ function fill_recipe(frm, alert) {
                 row.item_name = it.item_name;
                 row.planned_qty = it.planned_qty;
                 row.qty_consumed = it.qty_consumed;
-                row.uom = it.uom || 'KG';
+                row.uom = it.uom;  // server resolves to the item's stock UOM (portable across sites)
             });
             frm.refresh_field('consumption_items');
             frappe.show_alert({ message: (r.message.items || []).length + ' raw materials loaded from recipe', indicator: 'green' });

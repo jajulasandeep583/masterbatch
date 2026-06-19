@@ -29,12 +29,13 @@ def make_bom(formulation):
     bom = frappe.new_doc("BOM")
     bom.item = doc.finished_item
     bom.quantity = size
-    bom.uom = "KG"
+    # BOM UOM must be the finished item's own stock UOM (portable across sites)
+    bom.uom = frappe.db.get_value("Item", doc.finished_item, "stock_uom")
     for it in doc.formulation_items:
         bom.append("items", {
             "item_code": it.item_code,
             "qty": round((it.qty_per_100kg / 100.0) * size, 3),
-            "uom": "KG",
+            "uom": it.uom or frappe.db.get_value("Item", it.item_code, "stock_uom"),
         })
     bom.insert(ignore_permissions=True)
     bom.submit()

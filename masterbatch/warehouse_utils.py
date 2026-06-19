@@ -41,5 +41,13 @@ def get_fg_warehouse(company=None, item_code=None):
 
 
 def get_default_uom():
-    """Configurable default unit (Masterbatch Settings), falling back to KG."""
-    return _settings("default_uom") or "KG"
+    """Configurable default unit (Masterbatch Settings). Falls back to the first
+    weight UOM that actually exists on this site so we never produce an invalid
+    link on a fresh install (ERPNext ships 'Kg', not 'KG')."""
+    configured = _settings("default_uom")
+    if configured and frappe.db.exists("UOM", configured):
+        return configured
+    for name in ("KG", "Kg", "Kgs", "Kilogram"):
+        if frappe.db.exists("UOM", name):
+            return name
+    return frappe.db.get_value("UOM", {}, "name")

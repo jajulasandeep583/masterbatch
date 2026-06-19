@@ -102,7 +102,7 @@ def get_formulation_items(formulation, planned_qty=0):
             "item_name": it.item_name or frappe.db.get_value("Item", it.item_code, "item_name"),
             "planned_qty": plan,
             "qty_consumed": plan,
-            "uom": uom,
+            "uom": it.uom or frappe.db.get_value("Item", it.item_code, "stock_uom") or uom,
         })
     return {"finished_item": lf.finished_item, "shade_code": lf.shade_code, "items": rows}
 
@@ -125,6 +125,11 @@ def make_stock_entry(batch):
 
     company = get_default_company()
     uom = get_default_uom()
+
+    def _row_uom(item_code, row_uom=None):
+        # use the item's own stock UOM so this works on any site; fall back to the configured default
+        return row_uom or frappe.db.get_value("Item", item_code, "stock_uom") or uom
+
     wh_fg = get_fg_warehouse(company, doc.finished_item)
     if not wh_fg:
         frappe.throw("No finished-goods warehouse could be determined. Set a "
@@ -142,14 +147,14 @@ def make_stock_entry(batch):
             frappe.throw(f"No source warehouse for raw material <b>{r.item_code}</b>. Set a default "
                          "warehouse on the item, or a Default Source Warehouse in Masterbatch Settings.")
         se.append("items", {"item_code": r.item_code, "qty": r.qty_consumed,
-                            "s_warehouse": wh_src, "uom": r.uom or uom})
+                            "s_warehouse": wh_src, "uom": _row_uom(r.item_code, r.uom)})
     se.append("items", {"item_code": doc.finished_item, "qty": doc.actual_output_kg,
-                        "t_warehouse": wh_fg, "is_finished_item": 1, "uom": uom})
+                        "t_warehouse": wh_fg, "is_finished_item": 1, "uom": _row_uom(doc.finished_item)})
     # rejection becomes sellable scrap stock under the chosen rejection item
     if (doc.rejection_kg or 0) > 0 and doc.rejection_item:
         se.append("items", {"item_code": doc.rejection_item, "qty": doc.rejection_kg,
                             "t_warehouse": get_fg_warehouse(company, doc.rejection_item),
-                            "type": "Scrap", "allow_zero_valuation_rate": 1, "uom": uom})
+                            "type": "Scrap", "allow_zero_valuation_rate": 1, "uom": _row_uom(doc.rejection_item)})
     se.insert(ignore_permissions=True)
     se.submit()
     doc.db_set("stock_entry", se.name)
