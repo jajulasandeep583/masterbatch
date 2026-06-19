@@ -2,6 +2,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from masterbatch.warehouse_utils import get_default_company, get_stores_warehouse, get_fg_warehouse
+
 
 def evaluate_qc_status(row):
     """Pass/Fail for a QC row from its result vs the parameter's limits (server-side authority)."""
@@ -24,12 +26,6 @@ def evaluate_qc_status(row):
     return "Pass" if (mn <= val <= mx) else "Fail"
 
 
-def _stores_warehouse():
-    company = frappe.db.get_single_value("Global Defaults", "default_company")
-    abbr = frappe.db.get_value("Company", company, "abbr")
-    return f"Stores - {abbr}"
-
-
 class BatchProductionSheet(Document):
     def validate(self):
         if self.actual_output_kg and self.planned_qty:
@@ -45,7 +41,9 @@ class BatchProductionSheet(Document):
         self.check_raw_material_stock()
 
     def check_raw_material_stock(self):
-        wh_src = _stores_warehouse()
+        wh_src = get_stores_warehouse()
+        if not wh_src:
+            return  # no stores warehouse configured on this site — let the stock entry surface it
         required, names = {}, {}
         for r in self.consumption_items:
             if r.item_code and r.qty_consumed:
@@ -118,10 +116,12 @@ def make_stock_entry(batch):
             f"QC is <b>Passed</b> (current QC status: {doc.qc_status or 'Pending'})."
         )
 
-    company = frappe.db.get_single_value("Global Defaults", "default_company")
-    abbr = frappe.db.get_value("Company", company, "abbr")
-    wh_src = f"Stores - {abbr}"
-    wh_fg = f"Finished Goods - {abbr}"
+    company = get_default_company()
+    wh_src = get_stores_warehouse(company)
+    wh_fg = get_fg_warehouse(company, doc.finished_item)
+    if not wh_src or not wh_fg:
+        frappe.throw("Could not determine a source (stores) or finished-goods warehouse for "
+                     f"company {company}. Please configure warehouses for this company first.")
 
     se = frappe.new_doc("Stock Entry")
     se.stock_entry_type = "Manufacture"

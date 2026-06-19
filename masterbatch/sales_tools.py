@@ -1,6 +1,8 @@
 import frappe
 from frappe.utils import today, add_days, flt
 
+from masterbatch.warehouse_utils import get_default_company, get_stores_warehouse
+
 
 @frappe.whitelist()
 def get_item_qty(item_code, warehouse=None):
@@ -40,8 +42,8 @@ def make_raw_material_request(sales_order):
         frappe.throw("No recipe (Lab Formulation) found for the ordered items, so there are "
                      "no raw materials to request.")
 
-    company = so.company or frappe.db.get_single_value("Global Defaults", "default_company")
-    abbr = frappe.db.get_value("Company", company, "abbr") or "MB"
+    company = so.company or get_default_company()
+    warehouse = get_stores_warehouse(company)
     sched = add_days(today(), 7)
 
     mr = frappe.new_doc("Material Request")
@@ -54,7 +56,7 @@ def make_raw_material_request(sales_order):
             "item_code": item_code,
             "qty": round(qty, 3),
             "schedule_date": sched,
-            "warehouse": f"Stores - {abbr}",
+            "warehouse": warehouse,
         })
     mr.insert(ignore_permissions=True)
 

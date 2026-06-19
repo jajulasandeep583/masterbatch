@@ -1,12 +1,13 @@
 import frappe
 from frappe.utils import today, get_first_day
 
+from masterbatch.warehouse_utils import get_default_company, get_fg_warehouse
+
 
 @frappe.whitelist()
 def cockpit_data():
-    company = frappe.db.get_single_value("Global Defaults", "default_company")
-    abbr = frappe.db.get_value("Company", company, "abbr") or "MB"
-    wh_fg = f"Finished Goods - {abbr}"
+    company = get_default_company()
+    wh_fg = get_fg_warehouse(company)
     mstart = get_first_day(today())
     d = {}
 
@@ -38,9 +39,9 @@ def cockpit_data():
     d["open_pos"] = po.c
 
     d["fg_stock_value"] = int(frappe.db.sql(
-        "SELECT COALESCE(SUM(stock_value),0) FROM `tabBin` WHERE warehouse=%s", wh_fg)[0][0] or 0)
+        "SELECT COALESCE(SUM(stock_value),0) FROM `tabBin` WHERE warehouse=%s", wh_fg)[0][0] or 0) if wh_fg else 0
     d["fg_stock_qty"] = int(frappe.db.sql(
-        "SELECT COALESCE(SUM(actual_qty),0) FROM `tabBin` WHERE warehouse=%s", wh_fg)[0][0] or 0)
+        "SELECT COALESCE(SUM(actual_qty),0) FROM `tabBin` WHERE warehouse=%s", wh_fg)[0][0] or 0) if wh_fg else 0
 
     d["pending_so"] = frappe.db.sql("""SELECT so.name, so.customer, so.delivery_date,
         soi.item_code, soi.qty, IFNULL(so.per_delivered,0) per
