@@ -1,0 +1,60 @@
+{
+  "name": "Masterbatch Settings",
+  "module": "Masterbatch",
+  "doctype": "DocType",
+  "issingle": 1,
+  "fields": [
+    {
+      "fieldname": "warehouses_section",
+      "fieldtype": "Section Break",
+      "label": "Default Warehouses"
+    },
+    {
+      "fieldname": "default_source_warehouse",
+      "fieldtype": "Link",
+      "options": "Warehouse",
+      "label": "Default Source (Raw Material) Warehouse",
+      "description": "Raw materials are consumed from each item's own default warehouse; this is used only when an item has no default warehouse of its own."
+    },
+    {
+      "fieldname": "default_finished_goods_warehouse",
+      "fieldtype": "Link",
+      "options": "Warehouse",
+      "label": "Default Finished Goods Warehouse",
+      "description": "Where produced finished goods and rejection/scrap are received. Your choice — any warehouse."
+    },
+    {
+      "fieldname": "cb_wh",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "default_uom",
+      "fieldtype": "Link",
+      "options": "UOM",
+      "label": "Default UOM",
+      "default": "KG"
+    },
+    {
+      "fieldname": "coa_section",
+      "fieldtype": "Section Break",
+      "label": "Certificate of Analysis (COA)"
+    },
+    {
+      "fieldname": "coa_print_format",
+      "fieldtype": "Link",
+      "options": "Print Format",
+      "label": "COA Print Format",
+      "description": "Print format used by the 'Print COA' button on a Batch."
+    },
+    {
+      "fieldname": "coa_letter_head",
+      "fieldtype": "Link",
+      "options": "Letter Head",
+      "label": "COA Letter Head"
+    }
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Manufacturing Manager", "read": 1, "write": 1}
+  ]
+}

@@ -86,6 +86,42 @@ def make_qc_parameter_masters():
         doc.insert(ignore_permissions=True)
 
 
+def setup_masterbatch_settings():
+    """Pre-fill Masterbatch Settings with sensible starting values *only if they already exist*
+    on this site. These are just defaults the user can change — runtime logic reads the settings,
+    never a hardcoded warehouse name."""
+    if not frappe.db.exists("DocType", "Masterbatch Settings"):
+        return
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    abbr = frappe.db.get_value("Company", company, "abbr") if company else None
+    s = frappe.get_single("Masterbatch Settings")
+    changed = False
+
+    def seed(field, value):
+        nonlocal changed
+        if value and not s.get(field):
+            s.set(field, value)
+            changed = True
+
+    if abbr:
+        src = f"Stores - {abbr}"
+        if frappe.db.exists("Warehouse", src):
+            seed("default_source_warehouse", src)
+        fg = f"Finished Goods - {abbr}"
+        if frappe.db.exists("Warehouse", fg):
+            seed("default_finished_goods_warehouse", fg)
+    if frappe.db.exists("UOM", "KG"):
+        seed("default_uom", "KG")
+    if frappe.db.exists("Print Format", "Capital Colours COA - Batch"):
+        seed("coa_print_format", "Capital Colours COA - Batch")
+    if frappe.db.exists("Letter Head", "Capital Colours"):
+        seed("coa_letter_head", "Capital Colours")
+
+    if changed:
+        s.save(ignore_permissions=True)
+
+
 def after_migrate():
     make_coa_custom_fields()
     make_qc_parameter_masters()
+    setup_masterbatch_settings()

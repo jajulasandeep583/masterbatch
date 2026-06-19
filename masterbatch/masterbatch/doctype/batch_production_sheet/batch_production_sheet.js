@@ -19,18 +19,27 @@ frappe.ui.form.on('Batch Production Sheet', {
             frm.add_custom_button('✗ QC Failed', () => set_qc(frm, 'Failed'))
                 .removeClass('btn-default').addClass('btn-danger');
         }
-        // Certificate of Analysis straight from the batch
+        // Certificate of Analysis straight from the batch (print format + letter head from settings)
         if (frm.doc.docstatus === 1) {
             frm.add_custom_button('🖨 Print COA', () => {
                 if (!(frm.doc.qc_parameters || []).length) {
                     frappe.msgprint('Add QC Parameters and enter results first — the COA prints these values.');
                     return;
                 }
-                const url = '/printview?doctype=' + encodeURIComponent(frm.doc.doctype) +
-                    '&name=' + encodeURIComponent(frm.doc.name) +
-                    '&format=' + encodeURIComponent('Capital Colours COA - Batch') +
-                    '&no_letterhead=0&letterhead=' + encodeURIComponent('Capital Colours');
-                window.open(url, '_blank');
+                Promise.all([
+                    frappe.db.get_single_value('Masterbatch Settings', 'coa_print_format'),
+                    frappe.db.get_single_value('Masterbatch Settings', 'coa_letter_head')
+                ]).then(([pf, lh]) => {
+                    if (!pf) {
+                        frappe.msgprint('Set a <b>COA Print Format</b> in Masterbatch Settings first.');
+                        return;
+                    }
+                    let url = '/printview?doctype=' + encodeURIComponent(frm.doc.doctype) +
+                        '&name=' + encodeURIComponent(frm.doc.name) +
+                        '&format=' + encodeURIComponent(pf) + '&no_letterhead=0';
+                    if (lh) url += '&letterhead=' + encodeURIComponent(lh);
+                    window.open(url, '_blank');
+                });
             }).removeClass('btn-default').addClass('btn-primary');
         }
         if (frm.doc.docstatus === 1 && !frm.doc.stock_entry) {

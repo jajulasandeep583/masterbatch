@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils import today, add_days, flt
 
-from masterbatch.warehouse_utils import get_default_company, get_stores_warehouse
+from masterbatch.warehouse_utils import get_default_company, get_source_warehouse
 
 
 @frappe.whitelist()
@@ -43,7 +43,6 @@ def make_raw_material_request(sales_order):
                      "no raw materials to request.")
 
     company = so.company or get_default_company()
-    warehouse = get_stores_warehouse(company)
     sched = add_days(today(), 7)
 
     mr = frappe.new_doc("Material Request")
@@ -52,11 +51,12 @@ def make_raw_material_request(sales_order):
     mr.transaction_date = today()
     mr.schedule_date = sched
     for item_code, qty in agg.items():
+        # receive each raw material into the warehouse where that item is kept
         mr.append("items", {
             "item_code": item_code,
             "qty": round(qty, 3),
             "schedule_date": sched,
-            "warehouse": warehouse,
+            "warehouse": get_source_warehouse(company, item_code),
         })
     mr.insert(ignore_permissions=True)
 

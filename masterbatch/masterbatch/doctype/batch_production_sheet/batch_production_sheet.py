@@ -2,7 +2,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from masterbatch.warehouse_utils import get_default_company, get_stores_warehouse, get_fg_warehouse
+from masterbatch.warehouse_utils import (
+    get_default_company, get_source_warehouse, get_fg_warehouse, get_default_uom)
 
 
 def evaluate_qc_status(row):
@@ -41,29 +42,34 @@ class BatchProductionSheet(Document):
         self.check_raw_material_stock()
 
     def check_raw_material_stock(self):
-        wh_src = get_stores_warehouse()
-        if not wh_src:
-            return  # no stores warehouse configured on this site — let the stock entry surface it
-        required, names = {}, {}
+        company = get_default_company()
+        # required qty per (item, its source warehouse)
+        need_by = {}
+        names = {}
         for r in self.consumption_items:
-            if r.item_code and r.qty_consumed:
-                required[r.item_code] = required.get(r.item_code, 0) + flt(r.qty_consumed)
-                names[r.item_code] = r.item_name or r.item_code
+            if not (r.item_code and r.qty_consumed):
+                continue
+            wh = get_source_warehouse(company, r.item_code)
+            if not wh:
+                continue  # can't determine a warehouse — let the stock entry surface it
+            key = (r.item_code, wh)
+            need_by[key] = need_by.get(key, 0) + flt(r.qty_consumed)
+            names[r.item_code] = r.item_name or r.item_code
         short = []
-        for item_code, need in required.items():
-            avail = flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": wh_src}, "actual_qty"))
+        for (item_code, wh), need in need_by.items():
+            avail = flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": wh}, "actual_qty"))
             if avail < need:
-                short.append((item_code, names.get(item_code), need, avail))
+                short.append((item_code, names.get(item_code), need, avail, wh))
         if short:
             rows = "".join(
-                "<li><b>{n}</b> ({c}): need {need:g} KG, only <b>{avail:g} KG</b> available</li>".format(
-                    n=n or c, c=c, need=need, avail=avail)
-                for c, n, need, avail in short
+                "<li><b>{n}</b> ({c}): need {need:g}, only <b>{avail:g}</b> in {wh}</li>".format(
+                    n=n or c, c=c, need=need, avail=avail, wh=wh)
+                for c, n, need, avail, wh in short
             )
             frappe.throw(
-                "These raw materials don't have enough stock in <b>{wh}</b>:<ul>{rows}</ul>"
+                "These raw materials don't have enough stock:<ul>{rows}</ul>"
                 "Replace the short item(s) in the <b>Raw Material Consumption</b> table with an "
-                "available raw material (or add stock), then submit the batch again.".format(wh=wh_src, rows=rows),
+                "available raw material (or add stock), then submit the batch again.".format(rows=rows),
                 title="Insufficient Raw Material Stock",
             )
 
@@ -86,6 +92,7 @@ def find_formulation(finished_item):
 def get_formulation_items(formulation, planned_qty=0):
     """Return the recipe rows, scaled to the planned batch quantity, to auto-fill the batch sheet."""
     planned_qty = float(planned_qty or 0)
+    uom = get_default_uom()
     lf = frappe.get_doc("Lab Formulation", formulation)
     rows = []
     for it in lf.formulation_items:
@@ -95,7 +102,7 @@ def get_formulation_items(formulation, planned_qty=0):
             "item_name": it.item_name or frappe.db.get_value("Item", it.item_code, "item_name"),
             "planned_qty": plan,
             "qty_consumed": plan,
-            "uom": "KG",
+            "uom": uom,
         })
     return {"finished_item": lf.finished_item, "shade_code": lf.shade_code, "items": rows}
 
@@ -117,27 +124,32 @@ def make_stock_entry(batch):
         )
 
     company = get_default_company()
-    wh_src = get_stores_warehouse(company)
+    uom = get_default_uom()
     wh_fg = get_fg_warehouse(company, doc.finished_item)
-    if not wh_src or not wh_fg:
-        frappe.throw("Could not determine a source (stores) or finished-goods warehouse for "
-                     f"company {company}. Please configure warehouses for this company first.")
+    if not wh_fg:
+        frappe.throw("No finished-goods warehouse could be determined. Set a "
+                     "<b>Default Finished Goods Warehouse</b> in Masterbatch Settings.")
 
     se = frappe.new_doc("Stock Entry")
     se.stock_entry_type = "Manufacture"
     se.company = company
     se.posting_date = doc.production_date
     for r in doc.consumption_items:
-        if r.qty_consumed:
-            se.append("items", {"item_code": r.item_code, "qty": r.qty_consumed,
-                                "s_warehouse": wh_src, "uom": "KG"})
+        if not r.qty_consumed:
+            continue
+        wh_src = get_source_warehouse(company, r.item_code)
+        if not wh_src:
+            frappe.throw(f"No source warehouse for raw material <b>{r.item_code}</b>. Set a default "
+                         "warehouse on the item, or a Default Source Warehouse in Masterbatch Settings.")
+        se.append("items", {"item_code": r.item_code, "qty": r.qty_consumed,
+                            "s_warehouse": wh_src, "uom": r.uom or uom})
     se.append("items", {"item_code": doc.finished_item, "qty": doc.actual_output_kg,
-                        "t_warehouse": wh_fg, "is_finished_item": 1, "uom": "KG"})
+                        "t_warehouse": wh_fg, "is_finished_item": 1, "uom": uom})
     # rejection becomes sellable scrap stock under the chosen rejection item
     if (doc.rejection_kg or 0) > 0 and doc.rejection_item:
         se.append("items", {"item_code": doc.rejection_item, "qty": doc.rejection_kg,
-                            "t_warehouse": wh_fg, "type": "Scrap",
-                            "allow_zero_valuation_rate": 1, "uom": "KG"})
+                            "t_warehouse": get_fg_warehouse(company, doc.rejection_item),
+                            "type": "Scrap", "allow_zero_valuation_rate": 1, "uom": uom})
     se.insert(ignore_permissions=True)
     se.submit()
     doc.db_set("stock_entry", se.name)
