@@ -110,8 +110,10 @@ def setup_masterbatch_settings():
         fg = f"Finished Goods - {abbr}"
         if frappe.db.exists("Warehouse", fg):
             seed("default_finished_goods_warehouse", fg)
-    if frappe.db.exists("UOM", "KG"):
-        seed("default_uom", "KG")
+    for uom_name in ("KG", "Kg", "Kgs", "Kilogram"):
+        if frappe.db.exists("UOM", uom_name):
+            seed("default_uom", uom_name)
+            break
     if frappe.db.exists("Print Format", "Capital Colours COA - Batch"):
         seed("coa_print_format", "Capital Colours COA - Batch")
     if frappe.db.exists("Letter Head", "Capital Colours"):

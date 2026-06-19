@@ -32,7 +32,7 @@
       "fieldtype": "Link",
       "options": "UOM",
       "label": "Default UOM",
-      "default": "KG"
+      "description": "Leave blank to fall back to KG. Pick whatever UOM your site uses."
     },
     {
       "fieldname": "coa_section",
