@@ -91,7 +91,27 @@ frappe.ui.form.on('Batch Production Sheet', {
     // change planned qty -> rescale the recipe (from BOM or Lab Formulation)
     planned_qty(frm) {
         if ((frm.doc.source_bom || frm.doc.formulation_no) && frm.doc.planned_qty) fill_recipe(frm, false);
+    },
+
+    // entering the actual output -> show the loss % live (server re-confirms on save)
+    actual_output_kg(frm) {
+        compute_loss(frm);
     }
+});
+
+// live process-loss %: (raw material input − output) / input × 100
+function compute_loss(frm) {
+    const input = (frm.doc.consumption_items || []).reduce((s, r) => s + (r.qty_consumed || 0), 0);
+    const out = frm.doc.actual_output_kg || 0;
+    const rej = input > out ? input - out : 0;
+    frm.set_value('rejection_kg', rej);
+    frm.set_value('loss_percentage', input ? Math.round((rej / input) * 10000) / 100 : 0);
+}
+
+// recompute loss whenever a consumed quantity changes
+frappe.ui.form.on('Batch Production Sheet Item', {
+    qty_consumed(frm) { compute_loss(frm); },
+    consumption_items_remove(frm) { compute_loss(frm); }
 });
 
 // QC parameter rows: pick a parameter from the QC Parameter master -> unit / spec /

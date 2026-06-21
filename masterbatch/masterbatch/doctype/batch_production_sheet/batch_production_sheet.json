@@ -72,6 +72,14 @@
       "label": "Rejection (KG)"
     },
     {
+      "fieldname": "loss_percentage",
+      "fieldtype": "Percent",
+      "label": "Loss %",
+      "read_only": 1,
+      "in_list_view": 1,
+      "description": "Auto-calculated process loss = (raw material input − output) / input × 100."
+    },
+    {
       "fieldname": "rejection_item",
       "fieldtype": "Link",
       "label": "Rejection Item (sellable scrap)",

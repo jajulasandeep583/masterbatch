@@ -25,6 +25,7 @@ def execute(filters=None):
         {"label": "Planned (KG)",   "fieldname": "planned_qty",     "fieldtype": "Float", "width": 110},
         {"label": "Output (KG)",    "fieldname": "actual_output_kg","fieldtype": "Float", "width": 110},
         {"label": "Rejection (KG)", "fieldname": "rejection_kg",    "fieldtype": "Float", "width": 120},
+        {"label": "Loss %",         "fieldname": "loss_pct",        "fieldtype": "Percent", "width": 90},
         {"label": "Yield %",        "fieldname": "yield_pct",       "fieldtype": "Float", "width": 90},
         {"label": "QC Status",      "fieldname": "qc_status",       "fieldtype": "Data",  "width": 100},
         {"label": "Operator",       "fieldname": "operator",        "fieldtype": "Data",  "width": 120},
@@ -46,6 +47,9 @@ def execute(filters=None):
             b.production_date, b.batch_no, b.finished_item,
             it.item_group, b.shade_code,
             b.planned_qty, b.actual_output_kg, b.rejection_kg,
+            CASE WHEN (b.rejection_kg + b.actual_output_kg) > 0
+                 THEN ROUND(b.rejection_kg / (b.rejection_kg + b.actual_output_kg) * 100, 2)
+                 ELSE 0 END AS loss_pct,
             CASE WHEN b.planned_qty > 0
                  THEN ROUND((b.actual_output_kg / b.planned_qty) * 100, 2)
                  ELSE 0 END AS yield_pct,
@@ -61,6 +65,8 @@ def execute(filters=None):
     plan = sum(d.planned_qty or 0 for d in data)
     rej = sum(d.rejection_kg or 0 for d in data)
     avg_yield = round(out / plan * 100, 1) if plan else 0
+    total_input = out + rej
+    avg_loss = round(rej / total_input * 100, 1) if total_input else 0
     passed = sum(1 for d in data if d.qc_status == "Passed")
     pass_rate = round(passed / n * 100, 1) if n else 0
 
@@ -70,6 +76,8 @@ def execute(filters=None):
         {"value": avg_yield, "label": "Avg Yield %", "datatype": "Float",
          "indicator": "Green" if avg_yield >= 98 else "Orange"},
         {"value": round(rej), "label": "Total Rejection (KG)", "datatype": "Int", "indicator": "Red"},
+        {"value": avg_loss, "label": "Avg Loss %", "datatype": "Float",
+         "indicator": "Green" if avg_loss <= 2 else "Orange"},
         {"value": pass_rate, "label": "QC Pass Rate %", "datatype": "Float",
          "indicator": "Green" if pass_rate >= 80 else "Orange"},
     ]

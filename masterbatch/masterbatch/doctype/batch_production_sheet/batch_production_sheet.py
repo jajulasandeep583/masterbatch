@@ -32,6 +32,8 @@ class BatchProductionSheet(Document):
         if self.actual_output_kg and self.planned_qty:
             total_input = sum(r.qty_consumed or 0 for r in self.consumption_items)
             self.rejection_kg = total_input - self.actual_output_kg if total_input > self.actual_output_kg else 0
+            # process loss % = material lost (input not turned into output) / input
+            self.loss_percentage = round(self.rejection_kg / total_input * 100, 2) if total_input else 0
         # auto Pass/Fail each QC parameter from its result and the master's limits
         for row in (self.qc_parameters or []):
             row.status = evaluate_qc_status(row)
