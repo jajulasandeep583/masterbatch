@@ -43,7 +43,16 @@
       "fieldname": "formulation_no",
       "fieldtype": "Link",
       "label": "Lab Formulation",
-      "options": "Lab Formulation"
+      "options": "Lab Formulation",
+      "description": "Optional. Leave blank when the recipe comes from a BOM instead."
+    },
+    {
+      "fieldname": "source_bom",
+      "fieldtype": "Link",
+      "label": "Source BOM",
+      "options": "BOM",
+      "read_only": 1,
+      "description": "Set automatically when this batch is created from a BOM."
     },
     {
       "fieldname": "planned_qty",

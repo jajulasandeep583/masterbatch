@@ -108,6 +108,42 @@ def get_formulation_items(formulation, planned_qty=0):
 
 
 @frappe.whitelist()
+def make_batch_sheet(source_name, target_doc=None):
+    """Create a Batch Production Sheet from a BOM — recipe taken from the BOM's
+    components, so a Lab Formulation is NOT required. Components are loaded as
+    produced for the BOM's own output quantity (qty in stock UOM)."""
+    from frappe.model.mapper import get_mapped_doc
+
+    def _post(source, target):
+        target.planned_qty = source.quantity or 0
+        target.production_date = frappe.utils.today()
+        # carry a shade code if the finished item has one on a Lab Formulation
+        target.shade_code = frappe.db.get_value(
+            "Lab Formulation", {"finished_item": source.item}, "shade_code")
+        for row in target.consumption_items:
+            row.qty_consumed = row.planned_qty
+
+    return get_mapped_doc("BOM", source_name, {
+        "BOM": {
+            "doctype": "Batch Production Sheet",
+            "field_map": {
+                "name": "source_bom",
+                "item": "finished_item",
+            },
+        },
+        "BOM Item": {
+            "doctype": "Batch Production Sheet Item",
+            "field_map": {
+                "item_code": "item_code",
+                "item_name": "item_name",
+                "stock_qty": "planned_qty",
+                "stock_uom": "uom",
+            },
+        },
+    }, target_doc, _post)
+
+
+@frappe.whitelist()
 def make_stock_entry(batch):
     """Post real stock for a batch: consume raw materials, produce the finished masterbatch."""
     doc = frappe.get_doc("Batch Production Sheet", batch)

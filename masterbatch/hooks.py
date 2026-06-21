@@ -30,6 +30,7 @@ doctype_js = {
     "Sales Invoice": "public/js/coa_button.js",
     "Delivery Note": "public/js/coa_button.js",
     "Sales Order": "public/js/sales_order.js",
+    "BOM": "public/js/bom_button.js",
 }
 
 # --- App branding / launcher (added for demo) ---

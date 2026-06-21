@@ -2,8 +2,10 @@ frappe.ui.form.on('Batch Production Sheet', {
     onload(frm) {
         if (frm.is_new()) {
             if (!frm.doc.production_date) frm.set_value('production_date', frappe.datetime.get_today());
-            // came from Sales Order "Create Batch" with finished item prefilled
-            if (frm.doc.finished_item && !frm.doc.formulation_no) load_recipe_for_item(frm);
+            // came from Sales Order "Create Batch" with finished item prefilled.
+            // Skip when the batch was created from a BOM — its recipe is already loaded.
+            if (frm.doc.finished_item && !frm.doc.formulation_no && !frm.doc.source_bom)
+                load_recipe_for_item(frm);
         }
     },
 
@@ -70,6 +72,9 @@ frappe.ui.form.on('Batch Production Sheet', {
         }
         if (frm.doc.formulation_no) {
             frm.add_custom_button('Recipe', () => frappe.set_route('Form', 'Lab Formulation', frm.doc.formulation_no));
+        }
+        if (frm.doc.source_bom) {
+            frm.add_custom_button('Source BOM', () => frappe.set_route('Form', 'BOM', frm.doc.source_bom));
         }
     },
 
