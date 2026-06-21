@@ -108,6 +108,30 @@ def get_formulation_items(formulation, planned_qty=0):
 
 
 @frappe.whitelist()
+def get_bom_items(bom, planned_qty=0):
+    """Return a BOM's components scaled to the planned batch quantity, in the same
+    shape as get_formulation_items — so a batch can be (re)filled from a BOM with NO
+    Lab Formulation. planned_qty=0 -> components for the BOM's own output quantity."""
+    planned_qty = float(planned_qty or 0)
+    doc = frappe.get_doc("BOM", bom)
+    base = float(doc.quantity or 0) or 1.0           # BOM output qty (avoid div-by-zero)
+    factor = (planned_qty / base) if planned_qty else 1.0
+    rows = []
+    for it in doc.items:
+        per = float(it.stock_qty or it.qty or 0)     # component qty for the BOM's output
+        plan = round(per * factor, 3)
+        rows.append({
+            "item_code": it.item_code,
+            "item_name": it.item_name or frappe.db.get_value("Item", it.item_code, "item_name"),
+            "planned_qty": plan,
+            "qty_consumed": plan,
+            "uom": it.stock_uom or frappe.db.get_value("Item", it.item_code, "stock_uom"),
+        })
+    shade = frappe.db.get_value("Lab Formulation", {"finished_item": doc.item}, "shade_code")
+    return {"finished_item": doc.item, "shade_code": shade, "items": rows}
+
+
+@frappe.whitelist()
 def make_batch_sheet(source_name, target_doc=None):
     """Create a Batch Production Sheet from a BOM — recipe taken from the BOM's
     components, so a Lab Formulation is NOT required. Components are loaded as

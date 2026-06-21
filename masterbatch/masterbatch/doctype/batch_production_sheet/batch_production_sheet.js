@@ -88,9 +88,9 @@ frappe.ui.form.on('Batch Production Sheet', {
         if (frm.doc.formulation_no) fill_recipe(frm, false);
     },
 
-    // change planned qty -> rescale the recipe
+    // change planned qty -> rescale the recipe (from BOM or Lab Formulation)
     planned_qty(frm) {
-        if (frm.doc.formulation_no && frm.doc.planned_qty) fill_recipe(frm, false);
+        if ((frm.doc.source_bom || frm.doc.formulation_no) && frm.doc.planned_qty) fill_recipe(frm, false);
     }
 });
 
@@ -166,20 +166,28 @@ function load_recipe_for_item(frm) {
     });
 }
 
-// pull recipe rows and fill the consumption table (no event re-trigger)
+// pull recipe rows and fill the consumption table, scaled to the planned qty.
+// Source is the batch's BOM (no Lab Formulation needed) or its Lab Formulation.
 function fill_recipe(frm, alert) {
-    if (!frm.doc.formulation_no) {
-        if (alert) frappe.msgprint('Select a Finished Item or Lab Formulation first.');
+    let method, args;
+    if (frm.doc.source_bom) {
+        method = 'masterbatch.masterbatch.doctype.batch_production_sheet.batch_production_sheet.get_bom_items';
+        args = { bom: frm.doc.source_bom, planned_qty: frm.doc.planned_qty || 0 };
+    } else if (frm.doc.formulation_no) {
+        method = 'masterbatch.masterbatch.doctype.batch_production_sheet.batch_production_sheet.get_formulation_items';
+        args = { formulation: frm.doc.formulation_no, planned_qty: frm.doc.planned_qty || 0 };
+    } else {
+        if (alert) frappe.msgprint('Select a Finished Item, BOM or Lab Formulation first.');
         return;
     }
     frappe.call({
-        method: 'masterbatch.masterbatch.doctype.batch_production_sheet.batch_production_sheet.get_formulation_items',
-        args: { formulation: frm.doc.formulation_no, planned_qty: frm.doc.planned_qty || 0 },
+        method: method,
+        args: args,
         callback: (r) => {
             if (!r.message) return;
             // set parent fields WITHOUT triggering their change handlers
             frm.doc.finished_item = r.message.finished_item;
-            frm.doc.shade_code = r.message.shade_code;
+            if (r.message.shade_code) frm.doc.shade_code = r.message.shade_code;
             frm.refresh_field('finished_item');
             frm.refresh_field('shade_code');
             // fill the raw-material table
@@ -193,7 +201,7 @@ function fill_recipe(frm, alert) {
                 row.uom = it.uom;  // server resolves to the item's stock UOM (portable across sites)
             });
             frm.refresh_field('consumption_items');
-            frappe.show_alert({ message: (r.message.items || []).length + ' raw materials loaded from recipe', indicator: 'green' });
+            frappe.show_alert({ message: (r.message.items || []).length + ' raw materials loaded', indicator: 'green' });
         }
     });
 }
