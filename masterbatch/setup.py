@@ -23,6 +23,15 @@ COA_CUSTOM_FIELDS = {
             allow_on_submit=1,
             print_hide=1,
         ),
+        dict(
+            fieldname="available_qty",
+            label="Available Qty",
+            fieldtype="Float",
+            insert_after="qty",
+            read_only=1,
+            print_hide=1,
+            description="Current stock available for this item (auto-filled when the item is picked).",
+        ),
     ],
     "Delivery Note Item": [
         dict(

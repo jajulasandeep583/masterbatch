@@ -80,25 +80,33 @@ CERT_BODY = """
   </div>
 """
 
-# Sales Invoice / Delivery Note: one certificate page per distinct batch on the items
+# Sales Invoice / Delivery Note: one certificate page per distinct batch on the items.
+# Each row's batch is the one chosen in "Batch (COA)" OR, if none was chosen, the
+# latest QC-Passed batch for that item — so the COA prints reliably without manual
+# batch selection.
 SALES_COA_HTML = """
 <div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#222;">
 {% set seen = [] %}
-{% for row in doc.items if row.batch_production_sheet and row.batch_production_sheet not in seen %}
-{% set _x = seen.append(row.batch_production_sheet) %}
-{% set b = frappe.get_doc("Batch Production Sheet", row.batch_production_sheet) %}
-{% set coa_no = "COA/" ~ doc.name ~ "/" ~ loop.index %}
+{% for row in doc.items %}
+{% set bname = row.batch_production_sheet or frappe.db.get_value("Batch Production Sheet", {"finished_item": row.item_code, "docstatus": 1, "qc_status": "Passed"}, "name", order_by="production_date desc") %}
+{% if bname and bname not in seen %}
+{% set _x = seen.append(bname) %}
+{% set b = frappe.get_doc("Batch Production Sheet", bname) %}
+{% set coa_no = "COA/" ~ doc.name ~ "/" ~ (seen | length) %}
 {% set cert_date = doc.posting_date %}
 {% set ref_html = "<b>Reference:</b> " ~ doc.doctype ~ " " ~ doc.name ~ "<br/><b>Customer:</b> " ~ (doc.customer_name or doc.customer) ~ "<br/>" %}
-{% set qty_html = "<b>Qty Supplied:</b> " ~ (row.qty | round(2)) ~ " " ~ (row.uom or "KG") %}
-<div style="{% if not loop.last %}page-break-after:always;{% endif %}">
+{% set qty_html = "<b>Qty Supplied:</b> " ~ (row.qty | round(2)) ~ " " ~ (row.uom or b.finished_item) %}
+<div style="{% if seen | length > 1 %}page-break-before:always;{% endif %}">
 """ + CERT_BODY + """
 </div>
-{% else %}
-<div style="padding:20px;text-align:center;color:#888;">
-  No batch selected on the item rows — set <b>Batch (COA)</b> in the items table to print a Certificate of Analysis.
-</div>
+{% endif %}
 {% endfor %}
+{% if not seen %}
+<div style="padding:20px;text-align:center;color:#888;">
+  No QC-Passed batch was found for the items on this document. Produce and QC-pass a batch
+  for these items (or set <b>Batch (COA)</b> on the rows) to print a Certificate of Analysis.
+</div>
+{% endif %}
 </div>
 """
 
@@ -127,7 +135,9 @@ def make_pf(name, doctype, html):
     pf.custom_format = 1
     pf.standard = "No"
     pf.html = html
-    pf.letter_head = "Capital Colours"
+    # only attach the branded letter head if this site actually has it
+    if frappe.db.exists("Letter Head", "Capital Colours"):
+        pf.letter_head = "Capital Colours"
     pf.save(ignore_permissions=True)
     print("Print Format ready:", name, "->", doctype)
 
