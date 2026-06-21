@@ -91,6 +91,24 @@ def find_formulation(finished_item):
 
 
 @frappe.whitelist()
+def find_recipe_source(finished_item):
+    """Where to load a batch recipe for a finished item: its approved Lab Formulation
+    if one exists, otherwise its default / active BOM. Lets a manually created batch
+    auto-fill raw materials on sites that use BOMs (no Lab Formulation needed)."""
+    if not finished_item:
+        return {}
+    lf = find_formulation(finished_item)
+    if lf:
+        return {"formulation": lf}
+    bom = (frappe.db.get_value("BOM", {"item": finished_item, "is_default": 1, "docstatus": 1}, "name")
+           or frappe.db.get_value("BOM", {"item": finished_item, "is_active": 1, "docstatus": 1}, "name")
+           or frappe.db.get_value("BOM", {"item": finished_item, "docstatus": 1}, "name"))
+    if bom:
+        return {"bom": bom}
+    return {}
+
+
+@frappe.whitelist()
 def get_formulation_items(formulation, planned_qty=0):
     """Return the recipe rows, scaled to the planned batch quantity, to auto-fill the batch sheet."""
     planned_qty = float(planned_qty or 0)

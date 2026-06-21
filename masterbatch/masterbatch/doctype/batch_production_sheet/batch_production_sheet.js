@@ -11,8 +11,14 @@ frappe.ui.form.on('Batch Production Sheet', {
 
     refresh(frm) {
         if (frm.doc.docstatus === 0) {
-            frm.add_custom_button('⟳ Load Raw Materials from Recipe', () => fill_recipe(frm, true))
-                .removeClass('btn-default').addClass('btn-primary');
+            frm.add_custom_button('⟳ Load Raw Materials from Recipe', () => {
+                // if only a finished item is set, resolve its recipe source (Formulation/BOM) first
+                if (frm.doc.finished_item && !frm.doc.formulation_no && !frm.doc.source_bom) {
+                    load_recipe_for_item(frm);
+                } else {
+                    fill_recipe(frm, true);
+                }
+            }).removeClass('btn-default').addClass('btn-primary');
         }
         // QC decision on the finished goods (works after submit via allow_on_submit)
         if (frm.doc.docstatus === 1 && frm.doc.qc_status !== 'Passed' && !frm.doc.stock_entry) {
@@ -171,16 +177,29 @@ function set_qc(frm, status) {
     });
 }
 
-// find the approved formulation for the finished item, then load it
+// resolve the recipe source for the finished item (Lab Formulation OR its BOM), then load it
 function load_recipe_for_item(frm) {
+    if (!frm.doc.finished_item) return;
     frappe.call({
-        method: 'masterbatch.masterbatch.doctype.batch_production_sheet.batch_production_sheet.find_formulation',
+        method: 'masterbatch.masterbatch.doctype.batch_production_sheet.batch_production_sheet.find_recipe_source',
         args: { finished_item: frm.doc.finished_item },
         callback: (r) => {
-            if (r.message) {
-                frm.doc.formulation_no = r.message;
+            const m = r.message || {};
+            if (m.formulation) {
+                frm.doc.source_bom = null;
+                frm.doc.formulation_no = m.formulation;
                 frm.refresh_field('formulation_no');
                 fill_recipe(frm, false);
+            } else if (m.bom) {
+                frm.doc.formulation_no = null;
+                frm.doc.source_bom = m.bom;
+                frm.refresh_field('source_bom');
+                fill_recipe(frm, false);
+            } else {
+                frappe.show_alert({
+                    message: 'No Lab Formulation or BOM found for ' + frm.doc.finished_item +
+                        '. Enter the raw materials manually.', indicator: 'orange'
+                }, 6);
             }
         }
     });
